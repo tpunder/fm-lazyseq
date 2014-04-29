@@ -2,7 +2,7 @@ name := "fm-lazyseq"
 
 organization := "com.frugalmechanic"
 
-version := "0.1-SNAPSHOT"
+version := "0.1"
 
 description := "LazySeq"
 
@@ -17,9 +17,12 @@ crossScalaVersions := Seq("2.10.4", "2.11.0")
 
 scalacOptions := Seq("-unchecked", "-deprecation", "-language:implicitConversions", "-feature", "-optimise")
 
-resolvers += "Sonatype Snapshots" at "http://oss.sonatype.org/content/repositories/snapshots/"
+resolvers ++= Seq(
+  "Sonatype Snapshots" at "http://oss.sonatype.org/content/repositories/snapshots/",
+  "Sonatype Releases" at "http://oss.sonatype.org/content/repositories/releases/"
+)
 
-libraryDependencies += "com.frugalmechanic" %% "fm-common" % "0.1-SNAPSHOT"
+libraryDependencies += "com.frugalmechanic" %% "fm-common" % "0.1"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "2.1.3" % "test"
 
