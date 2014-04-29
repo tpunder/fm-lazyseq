@@ -2,7 +2,7 @@ name := "fm-lazyseq"
 
 organization := "com.frugalmechanic"
 
-version := "0.1"
+version := "0.2-SNAPSHOT"
 
 description := "LazySeq"
 
