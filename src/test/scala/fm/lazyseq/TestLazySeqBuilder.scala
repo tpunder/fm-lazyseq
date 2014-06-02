@@ -30,9 +30,9 @@ final class TestLazySeqBuilder extends FunSuite with Matchers {
   test("Single Threaded - Close") {
     val builder = newBuilder()
     builder += Foo
-    builder.resourceReader.next should equal (Foo)
+    builder.lazySeq.next should equal (Foo)
     builder.close()
-    builder.resourceReader.hasNext should equal (false)
+    builder.lazySeq.hasNext should equal (false)
   }
   
   test("Single Threaded - Abort") {
@@ -48,10 +48,10 @@ final class TestLazySeqBuilder extends FunSuite with Matchers {
       growable += Bar
     }
     
-    builder.resourceReader.next should equal (Foo)
-    builder.resourceReader.next should equal (Bar)
+    builder.lazySeq.next should equal (Foo)
+    builder.lazySeq.next should equal (Bar)
     builder.close()
-    builder.resourceReader.hasNext should equal (false)
+    builder.lazySeq.hasNext should equal (false)
   }
   
   test("withProducerThread - Abort") {
@@ -112,7 +112,7 @@ final class TestLazySeqBuilder extends FunSuite with Matchers {
     
     try {
       // This will either work or throw an AbortedException depending on timing.
-      builder.resourceReader.toIndexedSeq should equal (IndexedSeq(Foo, Bar))
+      builder.lazySeq.toIndexedSeq should equal (IndexedSeq(Foo, Bar))
     } catch {
       case ex: LazySeqBuilder.AbortedException => // This is also okay
     }
@@ -123,8 +123,8 @@ final class TestLazySeqBuilder extends FunSuite with Matchers {
     val builder = newBuilder()
     
     builder.withConsumerThread { reader =>
-      builder.resourceReader.next should equal (Foo)
-      builder.resourceReader.next should equal (Bar)
+      builder.lazySeq.next should equal (Foo)
+      builder.lazySeq.next should equal (Bar)
       throw new Throwable("Uncaught Throwable from withConsumerThread")
     }
     

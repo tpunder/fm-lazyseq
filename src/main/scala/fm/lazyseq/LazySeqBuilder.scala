@@ -52,7 +52,7 @@ final class LazySeqBuilder[A](queueSize: Int = 16, shutdownJVMOnUncaughtExceptio
     this
   }
   
-  def result(): LazySeq[A] = resourceReader
+  def result(): LazySeq[A] = lazySeq
   
   def clear(): Unit = ???
   
@@ -234,7 +234,7 @@ final class LazySeqBuilder[A](queueSize: Int = 16, shutdownJVMOnUncaughtExceptio
     logger.debug(s"${uniqueId} abortConsumer() ... DONE!")
   }
   
-  object resourceReader extends LazySeq[A] with Closeable { reader =>
+  object lazySeq extends LazySeq[A] with Closeable { reader =>
     private[this] var hd: AnyRef = null
     private[this] var hdDefined: Boolean = false
     
@@ -393,7 +393,7 @@ final class LazySeqBuilder[A](queueSize: Int = 16, shutdownJVMOnUncaughtExceptio
       if (aborting) return
       
       logger.debug(s"${uniqueId} ConsumerThread.run() ...")
-      f(resourceReader)
+      f(lazySeq)
       logger.debug(s"${uniqueId} ConsumerThread.run() ... DONE!")
     } catch {
       case ex: Aborted =>                    // Expected if we are aborting

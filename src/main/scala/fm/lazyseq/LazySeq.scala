@@ -38,12 +38,12 @@ object LazySeq {
   /**
    * Asynchronously build a LazySeq by spinning up a Producer thread and running the given function to produce elements
    */
-  def build[T](queueSize: Int)(f: Growable[T] => Unit): LazySeq[T] = new LazySeqBuilder(queueSize).withProducerThread(f).resourceReader
+  def build[T](queueSize: Int)(f: Growable[T] => Unit): LazySeq[T] = new LazySeqBuilder(queueSize).withProducerThread(f).lazySeq
   
   /**
    * Asynchronously build a LazySeq by spinning up a Producer thread and running the given function to produce elements
    */
-  def build[T](f: Growable[T] => Unit): LazySeq[T] = new LazySeqBuilder().withProducerThread(f).resourceReader
+  def build[T](f: Growable[T] => Unit): LazySeq[T] = new LazySeqBuilder().withProducerThread(f).lazySeq
   
   /**
    * Combine multiple LazySeqs into a single one by sequentially reading each reader

@@ -24,8 +24,8 @@ import fm.common.{Resource, SingleUseResource, TaskRunner}
 final class BufferedLazySeq[A](reader: LazySeq[A], size: Int = 1) extends LazySeq[A] with Closeable {
   private def builder = new LazySeqBuilder[A](size).withProducerThread{ growable => reader.foreach{ growable += _ } }
   
-  final def foreach[U](f: A => U): Unit = builder.resourceReader.foreach{ f }
-  final def iterator: LazySeqIterator[A] = builder.resourceReader.iterator
+  final def foreach[U](f: A => U): Unit = builder.lazySeq.foreach{ f }
+  final def iterator: LazySeqIterator[A] = builder.lazySeq.iterator
   final def close(): Unit = builder.close()
 }
 
@@ -56,7 +56,7 @@ final class ParallelMapLazySeq[A, B](reader: LazySeq[A], map: A => B, threads: I
         }
         
         // Our consumer
-        builder.resourceReader.foreach { future: Future[B] => f(Await.result(future, Duration.Inf)) }
+        builder.lazySeq.foreach { future: Future[B] => f(Await.result(future, Duration.Inf)) }
       }}
     } catch {
       case aborted: LazySeqBuilder.AbortedException => exception match {
