@@ -6,11 +6,11 @@ version := "0.2.0-SNAPSHOT"
 
 description := "LazySeq"
 
-scalaVersion := "2.10.4"
+scalaVersion := "2.11.1"
 
-crossScalaVersions := Seq("2.10.4", "2.11.0")
+crossScalaVersions := Seq("2.10.4", "2.11.1")
 
-scalacOptions := Seq("-unchecked", "-deprecation", "-language:implicitConversions", "-feature", "-optimise", "-Yinline-warnings")
+scalacOptions := Seq("-unchecked", "-deprecation", "-language:implicitConversions", "-feature", "-Xlint", "-optimise", "-Yinline-warnings")
 
 libraryDependencies += "com.frugalmechanic" %% "fm-common" % "0.1"
 
