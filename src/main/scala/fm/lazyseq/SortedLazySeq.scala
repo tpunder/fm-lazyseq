@@ -15,14 +15,14 @@
  */
 package fm.lazyseq
 
+import fm.common.Implicits._
+import fm.common.{ByteBufferInputStream, Logging, ProgressStats, Resource, Serializer, Snappy, TaskRunner, UncloseableOutputStream}
 import java.io._
 import java.nio.{ByteBuffer, MappedByteBuffer}
 import java.nio.channels.FileChannel
 import java.util.{List,Comparator,ArrayList,PriorityQueue}
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
-import fm.common.Implicits._
-import fm.common.{ByteBufferInputStream, Logging, ProgressStats, Resource, Serializer, Snappy, TaskRunner}
 
 object SortedLazySeq {
   def DefaultBufferSizeLimitMB: Int = 100
@@ -97,17 +97,9 @@ final class SortedLazySeq[V, K](reader: LazySeq[V], key: V => K, unique: Boolean
   
     val tmpFile: File = File.createTempFile("FmUtilSortedLazySeq", ".compressed")
     
-    val os: DataOutputStream = new DataOutputStream(Snappy.newSnappyOrGzipOutputStream(new FileOutputStream(tmpFile)))
+    // Open the file using RandomAccessFile
+    val raf = new RandomAccessFile(tmpFile, "rw")
 
-    try {
-      sorted.foreach{ keyValue: KeyBytesPair =>
-        os.writeInt(keyValue.bytes.length) // 4 bytes - Size of the data
-        os.write(keyValue.bytes)           // Actual data
-      }
-    } finally {
-      os.close()
-    }
-    
     //
     // NOTE: DO NOT USE File.deleteOnExit() since it uses an append-only LinkedHashSet
     //
@@ -116,18 +108,27 @@ final class SortedLazySeq[V, K](reader: LazySeq[V], key: V => K, unique: Boolean
     // garbage collected, closed, or the JVM shuts down the file will be deleted.
     //
     
-    // Open the file using RandomAccessFile
-    val raf = new RandomAccessFile(tmpFile, "r")
+    // Unlink the file from the file system
+    if (deleteTmpFiles) tmpFile.delete()
     
+    val os: DataOutputStream = new DataOutputStream(Snappy.newSnappyOrGzipOutputStream(UncloseableOutputStream(new FileOutputStream(raf.getFD))))
+
+    try {
+      sorted.foreach{ keyValue: KeyBytesPair =>
+        os.writeInt(keyValue.bytes.length) // 4 bytes - Size of the data
+        os.write(keyValue.bytes)           // Actual data
+      }
+    } finally {
+      os.flush()
+      os.close()
+    }
+
     // We use a MappedByteBuffer because if we use "new FileInputStream(raf.getFD)" then reading from
     // the FileInputstream updates the position in the RandomAccessFile which is not what we want.
     // The MappedByteBuffer (which we duplicate() before reading) should make us thread-safe for reading
     // by multiple threads and not require us to reset the RandomAccessFile position before re-reading.
     val buf: MappedByteBuffer = raf.getChannel().map(FileChannel.MapMode.READ_ONLY, 0, raf.length())
-    
-    // Unlink the file from the file system
-    if (deleteTmpFiles) tmpFile.delete()
-    
+        
     raf.close() // Should be save to close out the RandomAccessFile
     buf
   }

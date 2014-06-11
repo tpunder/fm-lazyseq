@@ -15,12 +15,11 @@
  */
 package fm.lazyseq
 
-import java.io.File
-import java.nio.ByteBuffer
-import fm.common.Serializer
+import fm.common.{Resource, Serializer}
+import java.io.DataInput
 
-final class TmpFileLazySeq[A](file: File, buf: ByteBuffer)(implicit serializer: Serializer[A]) extends LazySeq[A] {
-  private[this] val reader = SerializerReader(file, buf, serializer)
+final class TmpFileLazySeq[A](resource: Resource[DataInput])(implicit serializer: Serializer[A]) extends LazySeq[A] {
+  private[this] val reader = SerializerReader(resource, serializer)
   
   final def foreach[U](f: A => U): Unit = reader.foreach(f)
 }
