@@ -16,7 +16,7 @@
 package fm.lazyseq
 
 import fm.common.Implicits._
-import fm.common.{ByteBufferInputStream, Logging, ProgressStats, Resource, Serializer, Snappy, TaskRunner, UncloseableOutputStream}
+import fm.common.{ByteBufferInputStream, ByteBufferUtil, Logging, ProgressStats, Resource, Serializer, Snappy, TaskRunner, UncloseableOutputStream}
 import java.io._
 import java.nio.{ByteBuffer, MappedByteBuffer}
 import java.nio.channels.FileChannel
@@ -54,7 +54,7 @@ final class SortedLazySeq[V, K](reader: LazySeq[V], key: V => K, unique: Boolean
     var buffer = Vector.newBuilder[KeyBytesPair]
     var bufferSizeBytes: Int = 0
     var count: Int = 0
-    val sortAndSaveFutures = Vector.newBuilder[Future[MappedByteBuffer]]
+    val sortAndSaveFutures = Vector.newBuilder[Future[Vector[MappedByteBuffer]]]
     
     def flush() {
       // The result needs to be calculated outside of the sortAndSave task
@@ -82,7 +82,7 @@ final class SortedLazySeq[V, K](reader: LazySeq[V], key: V => K, unique: Boolean
     
     stats.finalStats
     
-    val files: Vector[MappedByteBuffer] = sortAndSaveFutures.result.map{ Await.result(_, Duration.Inf) }
+    val files: Vector[Vector[MappedByteBuffer]] = sortAndSaveFutures.result.map{ Await.result(_, Duration.Inf) }
     
     if(files.isEmpty) {
       LazySeq.empty
@@ -92,7 +92,7 @@ final class SortedLazySeq[V, K](reader: LazySeq[V], key: V => K, unique: Boolean
     }
   }
   
-  private def sortAndSave(buffer: Vector[KeyBytesPair]): MappedByteBuffer = {
+  private def sortAndSave(buffer: Vector[KeyBytesPair]): Vector[MappedByteBuffer] = {
     val sorted: Vector[KeyBytesPair] = buffer.sortBy{ _.key }
   
     val tmpFile: File = File.createTempFile("FmUtilSortedLazySeq", ".compressed")
@@ -127,10 +127,10 @@ final class SortedLazySeq[V, K](reader: LazySeq[V], key: V => K, unique: Boolean
     // the FileInputstream updates the position in the RandomAccessFile which is not what we want.
     // The MappedByteBuffer (which we duplicate() before reading) should make us thread-safe for reading
     // by multiple threads and not require us to reset the RandomAccessFile position before re-reading.
-    val buf: MappedByteBuffer = raf.getChannel().map(FileChannel.MapMode.READ_ONLY, 0, raf.length())
-        
-    raf.close() // Should be save to close out the RandomAccessFile
-    buf
+    val bufs: Vector[MappedByteBuffer] = ByteBufferUtil.map(raf, FileChannel.MapMode.READ_ONLY)
+    
+    raf.close() // Should be safe to close out the RandomAccessFile
+    bufs
   }
   
   /**
@@ -142,7 +142,7 @@ final class SortedLazySeq[V, K](reader: LazySeq[V], key: V => K, unique: Boolean
    *       can still read it.  Then when the FileDescriptor gets garbage collected OR the JVM
    *       shuts down the file will be automatically deleted.
    */
-  final class ReadSortedRecords(files: Seq[MappedByteBuffer]) extends LazySeq[V] with Closeable {
+  final class ReadSortedRecords(files: Vector[Vector[MappedByteBuffer]]) extends LazySeq[V] with Closeable {
     
     def foreach[U](f: V => U): Unit = Resource.using(makeBufferedRecordReaders()) { readers =>
       val pq: PriorityQueue[BufferedRecordReader] = makePriorityQueue()
@@ -183,8 +183,8 @@ final class SortedLazySeq[V, K](reader: LazySeq[V], key: V => K, unique: Boolean
    * Reads records back in from the sorted tmp file.  This class is statefull and should be wrapped
    * by something that will handle automatically closing it
    */
-  private final class BufferedRecordReader(buf: MappedByteBuffer) extends Closeable {    
-    private[this] val is: DataInputStream = new DataInputStream(Snappy.newSnappyOrGzipInputStream(new ByteBufferInputStream(buf.duplicate())))
+  private final class BufferedRecordReader(bufs: Vector[MappedByteBuffer]) extends Closeable {    
+    private[this] val is: DataInputStream = new DataInputStream(Snappy.newSnappyOrGzipInputStream(ByteBufferInputStream(bufs)))
     private[this] var _isEmpty: Boolean = false
     
     private[this] var _cache: V = _

@@ -15,7 +15,7 @@
  */
 package fm.lazyseq
 
-import fm.common.{ByteBufferInputStream, MultiUseResource, Resource, Serializer, Snappy, UncloseableOutputStream}
+import fm.common.{ByteBufferInputStream, ByteBufferUtil, MultiUseResource, Resource, Serializer, Snappy, UncloseableOutputStream}
 import java.io.{DataInput, DataInputStream, DataOutputStream, File, FileOutputStream, BufferedOutputStream, RandomAccessFile}
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
@@ -62,10 +62,10 @@ final class TmpFileLazySeqBuilder[A](deleteTmpFiles: Boolean = true)(implicit se
       writer.close()
       writer = null
       
-      val buf: MappedByteBuffer = raf.getChannel().map(FileChannel.MapMode.READ_ONLY, 0, raf.length())
+      val bufs: Vector[MappedByteBuffer] = ByteBufferUtil.map(raf, FileChannel.MapMode.READ_ONLY)
       raf.close()
       
-      val resource: Resource[DataInput] = MultiUseResource{ new DataInputStream(Snappy.newSnappyOrGzipInputStream(new ByteBufferInputStream(buf.duplicate()))) }
+      val resource: Resource[DataInput] = MultiUseResource{ new DataInputStream(Snappy.newSnappyOrGzipInputStream(ByteBufferInputStream(bufs))) }
       new TmpFileLazySeq[A](resource)(serializer)
     } 
   }
