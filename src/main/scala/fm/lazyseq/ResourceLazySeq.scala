@@ -15,13 +15,12 @@
  */
 package fm.lazyseq
 
-import java.io.Closeable
 import fm.common.Resource
 
 /**
  * Helper class that takes a Resource and handles using the resource
  */
-trait ResourceLazySeq[A, R <: Closeable] extends LazySeq[A] {
+trait ResourceLazySeq[A, R] extends LazySeq[A] {
   protected def resource: Resource[R]
   
   protected def foreachWithResource[U](f: A => U, r: R): Unit
