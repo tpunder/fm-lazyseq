@@ -24,6 +24,8 @@ import scala.collection.mutable.Builder
 /**
  * A builder that lets us build up a temp file that can be read back as a LazySeq.
  * Useful for methods like groupBy, grouped, partition, etc...
+ * 
+ * Methods are synchronized so this should be thread-safe now
  */
 final class TmpFileLazySeqBuilder[A](deleteTmpFiles: Boolean = true)(implicit serializer: Serializer[A]) extends Builder[A, LazySeq[A]] {
   def this(serializer: Serializer[A]) = this()(serializer)
@@ -42,9 +44,12 @@ final class TmpFileLazySeqBuilder[A](deleteTmpFiles: Boolean = true)(implicit se
   // TODO: find a better way?
   private[this] var writer: DataOutputStream = null
   
+  // Overridden to add make synchronized to prevent needing to re-synchronize for each += call
+  override def ++=(xs: TraversableOnce[A]): this.type = synchronized { xs.seq foreach += ; this }
+  
   // This logic has to match up with the SerializerWriter...
   // TODO: find a better way?
-  def +=(elem: A) = {
+  def +=(elem: A): this.type = synchronized {
     require(!done, "Already produced result!  Cannot add additional elements!")
     if(null == writer) writer = new DataOutputStream(new BufferedOutputStream(Snappy.newSnappyOrGzipOutputStream(UncloseableOutputStream(new FileOutputStream(raf.getFD)))))
     val bytes: Array[Byte] = serializer.serialize(elem)
@@ -54,7 +59,7 @@ final class TmpFileLazySeqBuilder[A](deleteTmpFiles: Boolean = true)(implicit se
     this
   }
   
-  def result: LazySeq[A] = {
+  def result: LazySeq[A] = synchronized {
     require(!done, "Already produced result!")
     done = true
     if(null == writer) EmptyLazySeq else {

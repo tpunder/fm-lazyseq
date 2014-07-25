@@ -30,6 +30,11 @@ object LazySeqBuilder {
   private def nextUniqueId(): Int = _uniqueIdAtomicInteger.incrementAndGet()
 }
 
+/**
+ * A LazySeq producer/consumer pair that uses a BlockingQueue
+ * 
+ * I think this is Thread-Safe
+ */
 final class LazySeqBuilder[A](queueSize: Int = 16, shutdownJVMOnUncaughtException: Boolean = false) extends Builder[A, LazySeq[A]] with Closeable with Logging { builder =>
   import LazySeqBuilder.AbortedException
   private[this] val END_OF_QUEUE: AnyRef = new Object{}
