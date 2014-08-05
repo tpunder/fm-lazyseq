@@ -28,12 +28,17 @@ import scala.concurrent.duration.Duration
 object SortedLazySeqBuilder {
   def DefaultBufferSizeLimitMB: Int = 100
   def DefaultBufferRecordLimit: Int = 250000
+  def DefaultSortAndSaveThreads: Int = 1
+  def DefaultSortAndSaveQueueSize: Int = 1
 }
 
 /**
+ * Keeps an in-memory buffer gets sorted once a size threshold is passed and written to a temp file.  This is repeated until
+ * result() is called.  Data is then read back from the temp files in sorted order.
+ * 
  * This should be thread-safe
  */
-final class SortedLazySeqBuilder[V, K](key: V => K, unique: Boolean = false, bufferSizeLimitMB: Int = SortedLazySeqBuilder.DefaultBufferSizeLimitMB, bufferRecordLimit: Int = SortedLazySeqBuilder.DefaultBufferRecordLimit)(implicit serializer: Serializer[V], ord: Ordering[K]) extends Builder[V, LazySeq[V]] with Logging {
+final class SortedLazySeqBuilder[V, K](key: V => K, unique: Boolean = false, bufferSizeLimitMB: Int = SortedLazySeqBuilder.DefaultBufferSizeLimitMB, bufferRecordLimit: Int = SortedLazySeqBuilder.DefaultBufferRecordLimit, sortAndSaveThreads: Int = SortedLazySeqBuilder.DefaultSortAndSaveThreads, sortAndSaveQueueSize: Int = SortedLazySeqBuilder.DefaultSortAndSaveQueueSize)(implicit serializer: Serializer[V], ord: Ordering[K]) extends Builder[V, LazySeq[V]] with Logging {
   import serializer._
   
   // Debug flag to disable deletion of tmp files
@@ -44,7 +49,7 @@ final class SortedLazySeqBuilder[V, K](key: V => K, unique: Boolean = false, buf
   
   private case class KeyBytesPair(key: K, bytes: Array[Byte])
   
-  private[this] val sortAndSaveTaskRunner = TaskRunner(name="SortedLazySeq-SortAndSave", threads=1, queueSize=1)
+  private[this] val sortAndSaveTaskRunner = TaskRunner(name="SortedLazySeq-SortAndSave", threads=sortAndSaveThreads, queueSize=sortAndSaveQueueSize)
   private[this] val stats = ProgressStats.forFasterProcesses()
     
   private[this] var buffer = Vector.newBuilder[KeyBytesPair]
@@ -63,10 +68,12 @@ final class SortedLazySeqBuilder[V, K](key: V => K, unique: Boolean = false, buf
     require(!done, "Already produced result!  Cannot add additional elements!")
     
     val keyBytes = KeyBytesPair(key(v), serialize(v))
+    
     buffer += keyBytes
     bufferSizeBytes += keyBytes.bytes.length
     count += 1
-    if(count >= bufferRecordLimit || bufferSizeBytes > bufferSizeLimitBytes) flush()
+    if (count >= bufferRecordLimit || bufferSizeBytes > bufferSizeLimitBytes) flush()
+    
     stats.increment()
     this
   }
@@ -105,6 +112,7 @@ final class SortedLazySeqBuilder[V, K](key: V => K, unique: Boolean = false, buf
   }
   
   private def sortAndSave(buffer: Vector[KeyBytesPair]): Vector[MappedByteBuffer] = {
+    // TODO: switch to using an array?  Vector.sortBy converts to an Array, performs the sort, then converts back to Vector
     val sorted: Vector[KeyBytesPair] = buffer.sortBy{ _.key }
   
     val tmpFile: File = File.createTempFile("FmUtilSortedLazySeq", ".compressed")
