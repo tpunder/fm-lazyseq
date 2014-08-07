@@ -20,7 +20,7 @@ import fm.common.{ByteBufferInputStream, ByteBufferUtil, Logging, ProgressStats,
 import java.io._
 import java.nio.{ByteBuffer, MappedByteBuffer}
 import java.nio.channels.FileChannel
-import java.util.{List, Comparator, ArrayList, PriorityQueue}
+import java.util.{Arrays, Comparator, PriorityQueue}
 import scala.collection.mutable.Builder
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
@@ -52,12 +52,14 @@ final class SortedLazySeqBuilder[V, K](key: V => K, unique: Boolean = false, buf
   private[this] val sortAndSaveTaskRunner = TaskRunner(name="SortedLazySeq-SortAndSave", threads=sortAndSaveThreads, queueSize=sortAndSaveQueueSize)
   private[this] val stats = ProgressStats.forFasterProcesses()
     
-  private[this] var buffer = Vector.newBuilder[KeyBytesPair]
+  private[this] var buffer: Array[KeyBytesPair] = new Array(bufferRecordLimit)
   private[this] var bufferSizeBytes: Int = 0
   private[this] var count: Int = 0
   private[this] val sortAndSaveFutures = Vector.newBuilder[Future[Vector[MappedByteBuffer]]]
   
   @volatile private[this] var done: Boolean = false
+  
+  private[this] val keyBytesOrdering: Ordering[KeyBytesPair] = Ordering.by[KeyBytesPair, K]{ _.key }
   
   override def ++=(xs: TraversableOnce[V]): this.type = synchronized {
     xs.foreach{ += }
@@ -67,9 +69,9 @@ final class SortedLazySeqBuilder[V, K](key: V => K, unique: Boolean = false, buf
   def +=(v: V): this.type = synchronized {
     require(!done, "Already produced result!  Cannot add additional elements!")
     
-    val keyBytes = KeyBytesPair(key(v), serialize(v))
+    val keyBytes: KeyBytesPair = KeyBytesPair(key(v), serialize(v))
     
-    buffer += keyBytes
+    buffer(count) = keyBytes
     bufferSizeBytes += keyBytes.bytes.length
     count += 1
     if (count >= bufferRecordLimit || bufferSizeBytes > bufferSizeLimitBytes) flush()
@@ -102,18 +104,18 @@ final class SortedLazySeqBuilder[V, K](key: V => K, unique: Boolean = false, buf
     
   private def flush() {
     // The result needs to be calculated outside of the sortAndSave task
-    val result: Vector[KeyBytesPair] = buffer.result
+    val result: Array[KeyBytesPair] = Arrays.copyOf(buffer, count)
+    
     sortAndSaveFutures += sortAndSaveTaskRunner.submit{ sortAndSave(result) }
     
     // Clear the buffer and counts
-    buffer = Vector.newBuilder[KeyBytesPair]
+    Arrays.fill(buffer.asInstanceOf[Array[Object]], 0, count, null)
     bufferSizeBytes = 0
     count = 0
   }
   
-  private def sortAndSave(buffer: Vector[KeyBytesPair]): Vector[MappedByteBuffer] = {
-    // TODO: switch to using an array?  Vector.sortBy converts to an Array, performs the sort, then converts back to Vector
-    val sorted: Vector[KeyBytesPair] = buffer.sortBy{ _.key }
+  private def sortAndSave(buffer: Array[KeyBytesPair]): Vector[MappedByteBuffer] = {
+    Arrays.sort(buffer, keyBytesOrdering)
   
     val tmpFile: File = File.createTempFile("FmUtilSortedLazySeq", ".compressed")
     
@@ -134,9 +136,13 @@ final class SortedLazySeqBuilder[V, K](key: V => K, unique: Boolean = false, buf
     val os: DataOutputStream = new DataOutputStream(Snappy.newSnappyOrGzipOutputStream(UncloseableOutputStream(new FileOutputStream(raf.getFD))))
 
     try {
-      sorted.foreach{ keyValue: KeyBytesPair =>
+      var i: Int = 0
+      while (i < buffer.length) {
+        val keyValue: KeyBytesPair = buffer(i)
         os.writeInt(keyValue.bytes.length) // 4 bytes - Size of the data
         os.write(keyValue.bytes)           // Actual data
+        buffer(i) = null                   // Clear the reference to the KeyBytesPair so it can potentially be GC'd sooner
+        i += 1
       }
     } finally {
       os.flush()
