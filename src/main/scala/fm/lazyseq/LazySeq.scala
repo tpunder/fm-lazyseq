@@ -116,11 +116,14 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
    * A Parallel foreach
    */
   final def parForeach[U](threads: Int = LazySeq.defaultThreadCount, inputBuffer: Int = LazySeq.defaultThreadCount)(f: A => U): Unit = {
-    val runner: TaskRunner = TaskRunner("RR-parForeach", threads = threads, queueSize = inputBuffer)
-    try {
-      for(x <- this) runner.execute{ f(x) }
-    } finally {
-      runner.shutdown(silent = true)
+    if (threads == 1) foreach(f)
+    else {
+      val runner: TaskRunner = TaskRunner("RR-parForeach", threads = threads, queueSize = inputBuffer)
+      try {
+        for(x <- this) runner.execute{ f(x) }
+      } finally {
+        runner.shutdown(silent = true)
+      }
     }
   }
   
@@ -302,7 +305,10 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
   /**
    * Performs a parallel map maintaining ordered output
    */
-  final def parMap[B](threads: Int = LazySeq.defaultThreadCount, inputBuffer: Int = LazySeq.defaultThreadCount, resultBuffer: Int = LazySeq.defaultThreadCount * 4)(f: A => B): LazySeq[B] = new ParallelMapLazySeq(this, f, threads = threads, inputBuffer = inputBuffer, resultBuffer = resultBuffer) 
+  final def parMap[B](threads: Int = LazySeq.defaultThreadCount, inputBuffer: Int = LazySeq.defaultThreadCount, resultBuffer: Int = LazySeq.defaultThreadCount * 4)(f: A => B): LazySeq[B] = {
+    if (threads == 1) map(f)
+    else new ParallelMapLazySeq(this, f, threads = threads, inputBuffer = inputBuffer, resultBuffer = resultBuffer)
+  } 
   
   /**
    * Performs a parallel flat map maintaining ordered output
@@ -313,7 +319,8 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
    * Performs a parallel flat map maintaining ordered output
    */
   final def parFlatMap[B](threads: Int = LazySeq.defaultThreadCount, inputBuffer: Int = LazySeq.defaultThreadCount, resultBuffer: Int = LazySeq.defaultThreadCount * 4)(f: A => GenTraversableOnce[B]): LazySeq[B] = {
-    parMap(threads, inputBuffer, resultBuffer)(f).flatten
+    if (threads == 1) flatMap(f)
+    else parMap(threads, inputBuffer, resultBuffer)(f).flatten
   }
   
   
