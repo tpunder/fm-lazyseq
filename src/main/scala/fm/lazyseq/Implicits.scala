@@ -76,7 +76,7 @@ object Implicits {
         
         val options: EnumSet[FileVisitOption] = if (followSymLinks) EnumSet.of(FileVisitOption.FOLLOW_LINKS) else EnumSet.noneOf(classOf[FileVisitOption])
         
-        Files.walkFileTree(file.toPath, options, Integer.MAX_VALUE, visitor)
+        Files.walkFileTree(file.toPath, options, maxDepth, visitor)
       }
     } 
   }
