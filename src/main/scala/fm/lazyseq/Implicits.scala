@@ -14,6 +14,8 @@ object Implicits {
      * Recursively list all files under a directory as a LazySeq
      * 
      * NOTE: This filters out directories or files that start with a dot (.)
+     * 
+     * @param maxDepth Using 1 will only return files under the directory that this is being called on
      */
     def recursiveFiles(maxDepth: Int = Int.MaxValue, followSymLinks: Boolean = false): LazySeq[File] = recursiveFilesAll(maxDepth, followSymLinks, includeFiles = true, includeDirs = false, depthFirstDirs = false)
     
@@ -21,6 +23,8 @@ object Implicits {
      * Recursively list all directories under a directory as a LazySeq
      * 
      * NOTE: This filters out directories or files that start with a dot (.)
+     * 
+     * @param maxDepth Using 1 will only return dirs under the directory that this is being called on
      */
     def recursiveDirs(maxDepth: Int = Int.MaxValue, followSymLinks: Boolean = false, depthFirstDirs: Boolean = false): LazySeq[File] = recursiveFilesAll(maxDepth, followSymLinks, includeFiles = false, includeDirs = true, depthFirstDirs = depthFirstDirs)
     
@@ -28,6 +32,8 @@ object Implicits {
      * Recursively list both files and directories under a directory as a LazySeq
      * 
      * NOTE: This filters out directories or files that start with a dot (.)
+     * 
+     * @param maxDepth Using 1 will only return files and dirs under the directory that this is being called on
      */
     def recursiveFilesAndDirs(maxDepth: Int = Int.MaxValue, followSymLinks: Boolean = false, depthFirstDirs: Boolean = false): LazySeq[File] = recursiveFilesAll(maxDepth, followSymLinks, includeFiles = true, includeDirs = true, depthFirstDirs = depthFirstDirs)
     
