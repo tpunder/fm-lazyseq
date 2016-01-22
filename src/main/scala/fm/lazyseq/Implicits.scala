@@ -18,7 +18,7 @@ object Implicits {
      * @param maxDepth Using 1 will only return files under the directory that this is being called on
      */
     def recursiveFiles(maxDepth: Int = Int.MaxValue, followSymLinks: Boolean = false, ignoreDotFiles: Boolean = true): LazySeq[File] = {
-      recursiveFilesAll(maxDepth, followSymLinks, includeFiles = true, includeDirs = false, depthFirstDirs = false, ignoreDotFiles = ignoreDotFiles)
+      recursiveFilesImpl(maxDepth, followSymLinks, includeFiles = true, includeDirs = false, depthFirstDirs = false, ignoreDotFiles = ignoreDotFiles)
     }
     
     /**
@@ -29,7 +29,7 @@ object Implicits {
      * @param maxDepth Using 1 will only return dirs under the directory that this is being called on
      */
     def recursiveDirs(maxDepth: Int = Int.MaxValue, followSymLinks: Boolean = false, depthFirstDirs: Boolean = false, ignoreDotFiles: Boolean = true): LazySeq[File] = {
-      recursiveFilesAll(maxDepth, followSymLinks, includeFiles = false, includeDirs = true, depthFirstDirs = depthFirstDirs, ignoreDotFiles = ignoreDotFiles)
+      recursiveFilesImpl(maxDepth, followSymLinks, includeFiles = false, includeDirs = true, depthFirstDirs = depthFirstDirs, ignoreDotFiles = ignoreDotFiles)
     }
     
     /**
@@ -40,16 +40,22 @@ object Implicits {
      * @param maxDepth Using 1 will only return files and dirs under the directory that this is being called on
      */
     def recursiveFilesAndDirs(maxDepth: Int = Int.MaxValue, followSymLinks: Boolean = false, ignoreDotFiles: Boolean = true, depthFirstDirs: Boolean = false): LazySeq[File] = {
-      recursiveFilesAll(maxDepth, followSymLinks, includeFiles = true, includeDirs = true, depthFirstDirs = depthFirstDirs, ignoreDotFiles = ignoreDotFiles)
+      recursiveFilesImpl(maxDepth, followSymLinks, includeFiles = true, includeDirs = true, depthFirstDirs = depthFirstDirs, ignoreDotFiles = ignoreDotFiles)
     }
     
-    private def recursiveFilesAll(maxDepth: Int, followSymLinks: Boolean, includeFiles: Boolean, includeDirs: Boolean, depthFirstDirs: Boolean, ignoreDotFiles: Boolean): LazySeq[File] = new LazySeq[File] {
+    private def recursiveFilesImpl(maxDepth: Int, followSymLinks: Boolean, includeFiles: Boolean, includeDirs: Boolean, depthFirstDirs: Boolean, ignoreDotFiles: Boolean): LazySeq[File] = new LazySeq[File] {
       def foreach[U](f: File => U): Unit = {
         require(file.isDirectory, s"Must be a directory: $file")
         
         val visitor = new SimpleFileVisitor[Path] {
           override def visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult = {
-            if (!ignore(file) && includeFiles) f(file.toFile())
+            if (!ignore(file)){
+              // From the Files.walkFileTree javadocs: 
+              //   "The visitFile method is invoked for all files, including directories, encountered at maxDepth,
+              //    unless the basic file attributes cannot be read, in which case the visitFileFailed method is invoked"
+              if (includeFiles && (attrs.isRegularFile() || attrs.isSymbolicLink())) f(file.toFile())
+              if (includeDirs && attrs.isDirectory()) f(file.toFile())
+            }
             super.visitFile(file, attrs)
           }
           
