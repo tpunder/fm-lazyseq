@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Frugal Mechanic (http://frugalmechanic.com)
+ * Copyright 2016 Frugal Mechanic (http://frugalmechanic.com)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -164,6 +164,7 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
   final def flatten[B](implicit asTraversable: A => GenTraversableOnce[B]): LazySeq[B] = flatMap{ a => asTraversable(a) }
   
   final def grouped[B >: A](size: Int): LazySeq[IndexedSeq[B]] = new GroupedLazySeq(this, size)
+  final def grouped[B >: A](size: Int, additionalIncrement: B => Int): LazySeq[IndexedSeq[B]] = new GroupedLazySeq(this, size, additionalIncrement)
   
   final def slice(from: Int, until: Int): LazySeq[A] = new SlicedLazySeq(this, from, until)
   final def take(n: Int): LazySeq[A] = if (n == 0) LazySeq.empty else slice(0, n)
