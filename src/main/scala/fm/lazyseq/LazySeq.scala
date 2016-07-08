@@ -31,6 +31,17 @@ object LazySeq {
   def wrap[T](self: TraversableOnce[T]): LazySeq[T] = new TraversableOnceLazySeq[T](self)
   
   /**
+   * Wraps a java.util.Iterator in a LazySeq
+   */
+  def wrap[T](it: java.util.Iterator[T]): LazySeq[T] = new JavaIteratorLazySeq[T](it)
+  
+  /**
+   * Wraps a java.util.Iterator in a LazySeq
+   */
+  def wrap[T](it: java.lang.Iterable[T]): LazySeq[T] = new JavaIterableLazySeq[T](it)
+  
+  
+  /**
    * Wrap a foreach method in a LazySeq
    */
   def wrap[T, U](foreach: (T => U) => Unit): LazySeq[T] = new ForeachLazySeq[T](foreach.asInstanceOf[(T => Any) => Unit])
