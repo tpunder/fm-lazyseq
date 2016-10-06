@@ -23,6 +23,13 @@ import fm.common.Implicits._
 import fm.common.{Resource, Serializer, TaskRunner}
 
 object LazySeq {
+  /**
+   * The default number of threads to use for parallel operations
+   *
+   * Note: According to The java.lang.Runtime Javadocs "this value may change
+   *       during a particular invocation of the virtual machine."  So that's
+   *       probably why this was made a def and not a val or lazy val.
+   */
   def defaultThreadCount: Int = Runtime.getRuntime().availableProcessors()
   
   /**
