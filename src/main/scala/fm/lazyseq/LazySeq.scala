@@ -134,7 +134,7 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
    * A Parallel foreach
    */
   final def parForeach[U](threads: Int = LazySeq.defaultThreadCount, inputBuffer: Int = LazySeq.defaultThreadCount)(f: A => U): Unit = {
-    if (threads == 1) foreach(f)
+    if (threads === 1) foreach(f)
     else {
       val runner: TaskRunner = TaskRunner("RR-parForeach", threads = threads, queueSize = inputBuffer)
       try {
@@ -185,10 +185,10 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
   final def grouped[B >: A](size: Int, additionalIncrement: B => Int): LazySeq[IndexedSeq[B]] = new GroupedLazySeq(this, size, additionalIncrement)
   
   final def slice(from: Int, until: Int): LazySeq[A] = new SlicedLazySeq(this, from, until)
-  final def take(n: Int): LazySeq[A] = if (n == 0) LazySeq.empty else slice(0, n)
-  final def drop(n: Int): LazySeq[A] = if (n == 0) this else slice(n, Int.MaxValue)
+  final def take(n: Int): LazySeq[A] = if (n === 0) LazySeq.empty else slice(0, n)
+  final def drop(n: Int): LazySeq[A] = if (n === 0) this else slice(n, Int.MaxValue)
   
-  final def dropRight(n: Int): LazySeq[A] = if (n == 0) this else new DropRightLazySeq(this, n)
+  final def dropRight(n: Int): LazySeq[A] = if (n === 0) this else new DropRightLazySeq(this, n)
   
   final def takeWhile(p: A => Boolean): LazySeq[A] = new TakeWhileLazySeq(this, p)
   final def dropWhile(p: A => Boolean): LazySeq[A] = new DropWhileLazySeq(this, p)
@@ -325,7 +325,7 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
    * Performs a parallel map maintaining ordered output
    */
   final def parMap[B](threads: Int = LazySeq.defaultThreadCount, inputBuffer: Int = LazySeq.defaultThreadCount, resultBuffer: Int = LazySeq.defaultThreadCount * 4)(f: A => B): LazySeq[B] = {
-    if (threads == 1) map(f)
+    if (threads === 1) map(f)
     else new ParallelMapLazySeq(this, f, threads = threads, inputBuffer = inputBuffer, resultBuffer = resultBuffer)
   } 
   
@@ -338,7 +338,7 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
    * Performs a parallel flat map maintaining ordered output
    */
   final def parFlatMap[B](threads: Int = LazySeq.defaultThreadCount, inputBuffer: Int = LazySeq.defaultThreadCount, resultBuffer: Int = LazySeq.defaultThreadCount * 4)(f: A => GenTraversableOnce[B]): LazySeq[B] = {
-    if (threads == 1) flatMap(f)
+    if (threads === 1) flatMap(f)
     else parMap(threads, inputBuffer, resultBuffer)(f).flatten
   }
   

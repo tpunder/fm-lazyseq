@@ -233,7 +233,7 @@ final private class SortedLazySeqBuilder[V, K](key: V => K, unique: Boolean = fa
       var totalBytesRead: Int = 0
       while(totalBytesRead < size) {
         val n = is.read(bytes, totalBytesRead, size - totalBytesRead)
-        if(-1 == n) {
+        if(-1 === n) {
           if(totalBytesRead > 0) logger.error("Unexpected EOFException.  Expected to read "+size+" bytes but only got "+totalBytesRead+" bytes before EOF")
           throw new EOFException()
         }

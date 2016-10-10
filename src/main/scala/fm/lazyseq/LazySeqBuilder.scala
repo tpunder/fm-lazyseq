@@ -15,13 +15,14 @@
  */
 package fm.lazyseq
 
+import fm.common.Logging
+import fm.common.Implicits._
 import java.io.Closeable
 import java.nio.channels.ClosedByInterruptException
 import java.util.concurrent.{ArrayBlockingQueue, BlockingQueue, CountDownLatch, SynchronousQueue, TimeUnit}
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 import scala.collection.generic.Growable
 import scala.collection.mutable.Builder
-import fm.common.Logging
 
 object LazySeqBuilder {
   final class AbortedException() extends Exception("LazySeqBuilder has been aborted!")
@@ -80,7 +81,7 @@ final class LazySeqBuilder[A](queueSize: Int = 16, shutdownJVMOnUncaughtExceptio
   
   protected final def isProducerOrConsumerThread(): Boolean = {
     val currentThread: Thread = Thread.currentThread()
-    currentThread == producerThread || currentThread == consumerThread
+    currentThread === producerThread || currentThread === consumerThread
   }
   
   private[this] final def abortCheck(): Unit = {

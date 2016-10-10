@@ -15,6 +15,8 @@
  */
 package fm.lazyseq
 
+import fm.common.Implicits._
+
 final private class DropRightLazySeq[A](reader: LazySeq[A], n: Int) extends LazySeq[A] {
   import java.util.{Queue, ArrayDeque}
   
@@ -22,7 +24,7 @@ final private class DropRightLazySeq[A](reader: LazySeq[A], n: Int) extends Lazy
   
   final def foreach[U](f: A => U) {
     for (x <- reader) {
-      if (queue.size() == n) f(queue.poll())
+      if (queue.size() === n) f(queue.poll())
       queue.add(x)
     }
   }
