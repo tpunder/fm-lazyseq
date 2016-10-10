@@ -17,11 +17,11 @@ package fm.lazyseq
 
 import scala.util.control.Breaks
 
-object TakeWhileLazySeq {
-  private val breaks = new Breaks
+private object TakeWhileLazySeq {
+  private val breaks: Breaks = new Breaks
 }
 
-final class TakeWhileLazySeq[A](reader: LazySeq[A], p: A => Boolean) extends LazySeq[A] {
+final private class TakeWhileLazySeq[A](reader: LazySeq[A], p: A => Boolean) extends LazySeq[A] {
   import TakeWhileLazySeq.breaks._
   
   final def foreach[U](f: A => U) {

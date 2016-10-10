@@ -15,7 +15,7 @@
  */
 package fm.lazyseq
 
-final class BatchedLazySeqIterator[A](reader: LazySeq[A], batchSize: Int = 32, bufferSize: Int = 0) extends LazySeqIterator[A] {
+final private class BatchedLazySeqIterator[A](reader: LazySeq[A], batchSize: Int = 32, bufferSize: Int = 0) extends LazySeqIterator[A] {
   private[this] val batchIterator: LazySeqIterator[IndexedSeq[A]] = new BufferedLazySeq[IndexedSeq[A]](reader.grouped(batchSize), bufferSize).iterator
   
   private[this] var it: Iterator[A] = if (batchIterator.hasNext) batchIterator.next.iterator else Iterator.empty

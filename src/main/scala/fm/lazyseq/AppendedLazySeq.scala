@@ -18,7 +18,7 @@ package fm.lazyseq
 /**
  * Used for LazySeq.++
  */
-final class AppendedLazySeq[A, B >: A](left: LazySeq[A], right: LazySeq[B]) extends LazySeq[B] {
+final private class AppendedLazySeq[A, B >: A](left: LazySeq[A], right: LazySeq[B]) extends LazySeq[B] {
   final def foreach[U](f: B => U): Unit = {
     left foreach f
     right foreach f

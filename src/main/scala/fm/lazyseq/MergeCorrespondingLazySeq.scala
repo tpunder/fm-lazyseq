@@ -20,7 +20,7 @@ import fm.common.Resource
 /**
  * For LazySeq.mergeCorresponding
  */
-final class MergeCorrespondingLazySeq[L, R, K](leftReader: LazySeq[L], rightReader: LazySeq[R], toLeftKey: L => K, toRightKey: R => K)(implicit ord: Ordering[K]) extends LazySeq[LazySeq.EitherOrBoth[L, R]] {
+final private class MergeCorrespondingLazySeq[L, R, K](leftReader: LazySeq[L], rightReader: LazySeq[R], toLeftKey: L => K, toRightKey: R => K)(implicit ord: Ordering[K]) extends LazySeq[LazySeq.EitherOrBoth[L, R]] {
   private[this] val asserts: Boolean = true
   
   import LazySeq.{EitherOrBoth, Left, Right, Both}

@@ -15,7 +15,7 @@
  */
 package fm.lazyseq
 
-final class AssertSortedReader[A, K](reader: LazySeq[A], unique: Boolean, toKey: A => K)(implicit ord: Ordering[K]) extends LazySeq[A] {
+final private class AssertSortedReader[A, K](reader: LazySeq[A], unique: Boolean, toKey: A => K)(implicit ord: Ordering[K]) extends LazySeq[A] {
   final def foreach[U](f: A => U) {
     var prevKey: K = null.asInstanceOf[K]
     var prevKeyDefined: Boolean = false

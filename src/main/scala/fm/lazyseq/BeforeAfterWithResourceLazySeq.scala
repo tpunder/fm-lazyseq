@@ -20,7 +20,7 @@ import fm.common.Resource
 /**
  * For LazySeq.beforeWithResource and LazySeq.afterWithResource
  */
-final class BeforeAfterWithResourceLazySeq[A, R, BEFORE, AFTER](reader: LazySeq[A], resource: Resource[R], before: (A, R) => BEFORE = (a: A, r: R) => {}, after: (A, R) => AFTER = (a: A, r: R) => {}) extends LazySeq[A] {
+final private class BeforeAfterWithResourceLazySeq[A, R, BEFORE, AFTER](reader: LazySeq[A], resource: Resource[R], before: (A, R) => BEFORE = (a: A, r: R) => {}, after: (A, R) => AFTER = (a: A, r: R) => {}) extends LazySeq[A] {
   def foreach[U](f: A => U): Unit = resource.use { r =>
     reader.foreach { a =>
       before(a, r)

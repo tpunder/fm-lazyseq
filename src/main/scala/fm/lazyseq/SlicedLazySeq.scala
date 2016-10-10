@@ -20,11 +20,11 @@ import scala.util.control.Breaks
 /**
  * Used for LazySeq.slice
  */
-object SlicedLazySeq {
+private object SlicedLazySeq {
   private val breaks = new Breaks
 }
 
-final class SlicedLazySeq[A](reader: LazySeq[A], from: Int, until: Int) extends LazySeq[A] {
+final private class SlicedLazySeq[A](reader: LazySeq[A], from: Int, until: Int) extends LazySeq[A] {
   require(from < until, s"Expected from < until but got from: $from  until: $until")
   
   import SlicedLazySeq.breaks._

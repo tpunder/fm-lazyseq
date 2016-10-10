@@ -25,7 +25,7 @@ package fm.lazyseq
  * LazySeq.grouped might give you IndexedSeqs of differing sizes but you could
  * try to keep the amount of memory or processing time more uniform.
  */
-final class GroupedLazySeq[A](reader: LazySeq[A], size: Int, additionalIncrement: A => Int) extends LazySeq[IndexedSeq[A]] {
+final private class GroupedLazySeq[A](reader: LazySeq[A], size: Int, additionalIncrement: A => Int) extends LazySeq[IndexedSeq[A]] {
   def this(reader: LazySeq[A], size: Int) = this(reader, size, null)
   
   assert(size > 0, "size must be > 0 for GroupedLazySeq")

@@ -20,7 +20,7 @@ import fm.common.TaskRunner
 /**
  * Like the MultiLazySeq but will read from the readers in parallel
  */
-final class ParallelMultiLazySeq[A](threads: Int, queueSize: Int, readers: LazySeq[A]*) extends LazySeq[A] {
+final private class ParallelMultiLazySeq[A](threads: Int, queueSize: Int, readers: LazySeq[A]*) extends LazySeq[A] {
   import java.util.concurrent.ArrayBlockingQueue
   
   // For marking the end of an individual reader

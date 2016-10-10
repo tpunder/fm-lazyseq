@@ -15,7 +15,7 @@
  */
 package fm.lazyseq
 
-final class DropWhileLazySeq[A](reader: LazySeq[A], p: A => Boolean) extends LazySeq[A] {  
+final private class DropWhileLazySeq[A](reader: LazySeq[A], p: A => Boolean) extends LazySeq[A] {
   final def foreach[U](f: A => U) {
     var go: Boolean = false
     for (x <- reader) {

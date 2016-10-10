@@ -18,7 +18,7 @@ package fm.lazyseq
 /**
  * For LazySeq.before and LazySeq.after 
  */
-final class BeforeAfterLazySeq[A, BEFORE, AFTER](reader: LazySeq[A], before: A => BEFORE = (a: A) => {}, after: A => AFTER = (a: A) => {}) extends LazySeq[A] {
+final private class BeforeAfterLazySeq[A, BEFORE, AFTER](reader: LazySeq[A], before: A => BEFORE = (a: A) => {}, after: A => AFTER = (a: A) => {}) extends LazySeq[A] {
   def foreach[U](f: A => U): Unit = {
     reader.foreach { a =>
       before(a)

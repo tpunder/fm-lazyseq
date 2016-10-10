@@ -18,6 +18,6 @@ package fm.lazyseq
 /**
  * An empty resource reader
  */
-object EmptyLazySeq extends LazySeq[Nothing] {
+private object EmptyLazySeq extends LazySeq[Nothing] {
   final def foreach[U](f: Nothing => U) {}
 }

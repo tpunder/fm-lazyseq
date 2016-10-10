@@ -18,7 +18,7 @@ package fm.lazyseq
 /**
  * For LazySeq.groupedBy
  */
-final class GroupedByLazySeq[A, K](reader: LazySeq[A], by: A => K) extends LazySeq[(K, IndexedSeq[A])] {  
+final private class GroupedByLazySeq[A, K](reader: LazySeq[A], by: A => K) extends LazySeq[(K, IndexedSeq[A])] {
   def foreach[U](f: Tuple2[K, IndexedSeq[A]] => U) {
     var buf = Vector.newBuilder[A]
     var first: Boolean = true

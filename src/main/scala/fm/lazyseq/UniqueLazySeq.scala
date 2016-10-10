@@ -18,7 +18,7 @@ package fm.lazyseq
 /**
  * Eliminates duplicate records that are next to each other based on a key within that record
  */
-final class UniqueLazySeq[A, K](reader: LazySeq[A], key: A => K) extends LazySeq[A] {  
+final private class UniqueLazySeq[A, K](reader: LazySeq[A], key: A => K) extends LazySeq[A] {
   def foreach[U](f: A => U) {
     var isFirst: Boolean = true
     var current: A = null.asInstanceOf[A]

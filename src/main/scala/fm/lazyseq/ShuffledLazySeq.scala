@@ -21,7 +21,7 @@ import fm.common.Serializer
 /**
  * Randomly Shuffles the records 
  */
-final class ShuffledLazySeq[V](reader: LazySeq[V], random: Random = new Random())(implicit serializer: Serializer[V]) extends LazySeq[V] {
+final private class ShuffledLazySeq[V](reader: LazySeq[V], random: Random = new Random())(implicit serializer: Serializer[V]) extends LazySeq[V] {
   import java.nio.ByteBuffer
 
   private case class KeyValue(key: Long, value: V)

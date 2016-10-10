@@ -18,6 +18,6 @@ package fm.lazyseq
 /**
  * More generic version of LazySeq.++ that can take an arbitrary number of LazySeqs
  */
-final class MultiLazySeq[A](readers: LazySeq[A]*) extends LazySeq[A] {
+final private class MultiLazySeq[A](readers: LazySeq[A]*) extends LazySeq[A] {
   final def foreach[U](f: A => U): Unit = for (reader <- readers; x <- reader) f(x)
 }

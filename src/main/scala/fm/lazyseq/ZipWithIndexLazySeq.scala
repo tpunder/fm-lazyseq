@@ -18,7 +18,7 @@ package fm.lazyseq
 /**
  * Used for LazySeq.zipWithIndex
  */
-final class ZipWithIndexLazySeq[A](reader: LazySeq[A]) extends LazySeq[(A, Int)] {
+final private class ZipWithIndexLazySeq[A](reader: LazySeq[A]) extends LazySeq[(A, Int)] {
   final def foreach[U](f: Tuple2[A, Int] => U) {
     var i = 0
     for (x <- reader) {

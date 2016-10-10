@@ -18,6 +18,6 @@ package fm.lazyseq
 /**
  * LazySeq implementation that wraps a TraversableOnce
  */
-final class TraversableOnceLazySeq[A](self: TraversableOnce[A]) extends LazySeq[A] {
+final private class TraversableOnceLazySeq[A](self: TraversableOnce[A]) extends LazySeq[A] {
   final def foreach[U](f: A => U) = self.foreach[U](f)
 }

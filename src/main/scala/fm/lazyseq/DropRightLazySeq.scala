@@ -15,25 +15,15 @@
  */
 package fm.lazyseq
 
-import scala.util.control.Breaks
-
-object DropRightLazySeq {
-  private val breaks = new Breaks
-}
-
-final class DropRightLazySeq[A](reader: LazySeq[A], n: Int) extends LazySeq[A] {
-  import DropRightLazySeq.breaks._
-  
+final private class DropRightLazySeq[A](reader: LazySeq[A], n: Int) extends LazySeq[A] {
   import java.util.{Queue, ArrayDeque}
   
   private[this] val queue: Queue[A] = new ArrayDeque(n)
   
   final def foreach[U](f: A => U) {
-    breakable {
-      for (x <- reader) {
-        if (queue.size() == n) f(queue.poll())
-        queue.add(x)
-      }
+    for (x <- reader) {
+      if (queue.size() == n) f(queue.poll())
+      queue.add(x)
     }
   }
 }

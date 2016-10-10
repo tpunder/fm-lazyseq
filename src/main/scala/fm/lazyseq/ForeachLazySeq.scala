@@ -18,6 +18,6 @@ package fm.lazyseq
 /**
  * LazySeq implementation that wraps any foreach method
  */
-final class ForeachLazySeq[A](foreachImpl: (A => Any) => Unit) extends LazySeq[A] {
+final private class ForeachLazySeq[A](foreachImpl: (A => Any) => Unit) extends LazySeq[A] {
   final def foreach[U](f: A => U) = foreachImpl(f)
 }

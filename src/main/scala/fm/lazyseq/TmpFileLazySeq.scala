@@ -18,7 +18,7 @@ package fm.lazyseq
 import fm.common.{Resource, Serializer}
 import java.io.DataInput
 
-final class TmpFileLazySeq[A](resource: Resource[DataInput])(implicit serializer: Serializer[A]) extends LazySeq[A] {
+final private class TmpFileLazySeq[A](resource: Resource[DataInput])(implicit serializer: Serializer[A]) extends LazySeq[A] {
   private[this] val reader = SerializerReader(resource, serializer)
   
   final def foreach[U](f: A => U): Unit = reader.foreach(f)
