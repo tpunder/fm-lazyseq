@@ -12,4 +12,4 @@ scalacOptions := Seq("-unchecked", "-deprecation", "-language:implicitConversion
 
 libraryDependencies += "com.frugalmechanic" %% "fm-common" % "0.7.0-SNAPSHOT"
 
-libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.4" % "test"
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.0" % "test"
