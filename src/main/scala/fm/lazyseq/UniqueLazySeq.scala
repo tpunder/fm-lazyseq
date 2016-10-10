@@ -23,8 +23,8 @@ final private class UniqueLazySeq[A, K](reader: LazySeq[A], key: A => K) extends
     var isFirst: Boolean = true
     var current: A = null.asInstanceOf[A]
     
-    reader.foreach { next =>
-      if(isFirst) {
+    reader.foreach { next: A =>
+      if (isFirst) {
         current = next
         isFirst = false
       } else if (key(current) != key(next)) {
@@ -35,6 +35,6 @@ final private class UniqueLazySeq[A, K](reader: LazySeq[A], key: A => K) extends
       }
     }
     
-    if(!isFirst) f(current)
+    if (!isFirst) f(current)
   }
 }

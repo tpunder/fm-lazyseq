@@ -21,7 +21,7 @@ import scala.util.control.Breaks
  * Used for LazySeq.slice
  */
 private object SlicedLazySeq {
-  private val breaks = new Breaks
+  private val breaks: Breaks = new Breaks
 }
 
 final private class SlicedLazySeq[A](reader: LazySeq[A], from: Int, until: Int) extends LazySeq[A] {
@@ -30,14 +30,14 @@ final private class SlicedLazySeq[A](reader: LazySeq[A], from: Int, until: Int) 
   import SlicedLazySeq.breaks._
   
   final def foreach[U](f: A => U) {
-    if(from < 0) throw new IllegalArgumentException("Slice 'from' argument cannot be < 0")
+    if (from < 0) throw new IllegalArgumentException("Slice 'from' argument cannot be < 0")
     
-    var i = 0
+    var i: Int = 0
     breakable {
       for (x <- reader) {
-        if(i >= from) f(x)
+        if (i >= from) f(x)
         i += 1
-        if(i >= until) break
+        if (i >= until) break
       }
     }
   }

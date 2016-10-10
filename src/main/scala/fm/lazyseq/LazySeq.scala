@@ -90,7 +90,7 @@ object LazySeq {
    * Our own copy of breaks to avoid conflicts with any other breaks:
    * "Calls to break from one instantiation of Breaks will never target breakable objects of some other instantiation."
    */
-  private val breaks = new Breaks
+  private val breaks: Breaks = new Breaks
   
   sealed abstract class EitherOrBoth[+L, +R] {
     def leftOption: Option[L]
@@ -284,8 +284,8 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
    * Split the LazySeq into num buckets of equal size using a round-robin algorithm
    */
   final def bucketize[B >: A](num: Int)(implicit serializer: Serializer[B]): Vector[LazySeq[B]] = {
-    val builders = new Array[TmpFileLazySeqBuilder[B]](num)
-    (0 until num).foreach{ i => builders(i) = new TmpFileLazySeqBuilder }
+    val builders: Array[TmpFileLazySeqBuilder[B]] = new Array(num)
+    (0 until num).foreach{ i: Int => builders(i) = new TmpFileLazySeqBuilder }
     
     var i: Int = 0
     
@@ -303,10 +303,10 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
    * Standard partition implementation using LazySeqs
    */
   final def partition[B >: A](p: A => Boolean)(implicit serializer: Serializer[B]): (LazySeq[B], LazySeq[B]) = {
-    val left = new TmpFileLazySeqBuilder(serializer)
-    val right = new TmpFileLazySeqBuilder(serializer)
+    val left: TmpFileLazySeqBuilder[B] = new TmpFileLazySeqBuilder(serializer)
+    val right: TmpFileLazySeqBuilder[B] = new TmpFileLazySeqBuilder(serializer)
     
-    foreach { a => if(p(a)) left += a else right += a }
+    foreach { a: A => if (p(a)) left += a else right += a }
     
     (left.result, right.result)
   }
@@ -399,8 +399,8 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
   // TraversableOnce Implementation (copied from TraversableLike)
   //  
   final def copyToArray[B >: A](xs: Array[B], start: Int, len: Int) {
-    var i = start
-    val end = (start + len) min xs.length
+    var i: Int = start
+    val end: Int = (start + len) min xs.length
     breakable {
       for (x <- this) {
         if (i >= end) break
@@ -411,7 +411,7 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
   }
   
   final def exists(p: A => Boolean): Boolean = {
-    var result = false
+    var result: Boolean = false
     breakable {
       for (x <- this) if (p(x)) { result = true; break }
     }
@@ -427,7 +427,7 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
   }
   
   final def forall(p: A => Boolean): Boolean = {
-    var result = true
+    var result: Boolean = true
     breakable {
       for (x <- this) if(!p(x)) { result = false; break }
     }
@@ -437,7 +437,7 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
   def hasDefiniteSize = true
   
   def isEmpty: Boolean = {
-    var result = true
+    var result: Boolean = true
     breakable {
       for (x <- this) { result = false; break }
     }

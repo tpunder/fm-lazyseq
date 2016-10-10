@@ -41,7 +41,7 @@ final private class ParallelMultiLazySeq[A](threads: Int, queueSize: Int, reader
   
       var counter: Int = readers.size
       
-      while(counter > 0) {
+      while (counter > 0) {
         val elem: AnyRef = queue.take()
         if (elem eq END_OF_READER) counter -= 1 else elem.asInstanceOf[IndexedSeq[A]].foreach{ f }
       }

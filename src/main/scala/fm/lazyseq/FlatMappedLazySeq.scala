@@ -21,5 +21,5 @@ import scala.collection.GenTraversableOnce
  * Used for LazySeq.flatMap
  */
 final private class FlatMappedLazySeq[A, B](reader: LazySeq[A], mapping: A => GenTraversableOnce[B]) extends LazySeq[B] {
-  final def foreach[U](f: B => U): Unit = for(x <- reader) for(y <- mapping(x).seq) f(y)
+  final def foreach[U](f: B => U): Unit = for (x <- reader) for (y <- mapping(x).seq) f(y)
 }

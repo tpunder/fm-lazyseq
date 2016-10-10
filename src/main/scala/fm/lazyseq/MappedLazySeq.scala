@@ -19,5 +19,5 @@ package fm.lazyseq
  * Used for LazySeq.map
  */
 final private class MappedLazySeq[A, B](reader: LazySeq[A], mapping: A => B) extends LazySeq[B] {
-  final def foreach[U](f: B => U): Unit = for(x <- reader) f(mapping(x))
+  final def foreach[U](f: B => U): Unit = for (x <- reader) f(mapping(x))
 }

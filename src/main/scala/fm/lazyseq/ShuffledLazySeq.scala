@@ -34,7 +34,7 @@ final private class ShuffledLazySeq[V](reader: LazySeq[V], random: Random = new 
     }
   } 
   
-  private def shuffledReader = reader.map{ v => KeyValue(random.nextLong(), v) }.sortBy(KeyValueSerializer){ _.key }.map{ _.value }
+  private def shuffledReader: LazySeq[V] = reader.map{ v => KeyValue(random.nextLong(), v) }.sortBy(KeyValueSerializer){ _.key }.map{ _.value }
   
   final def foreach[U](f: V => U): Unit = shuffledReader.foreach(f)
 }

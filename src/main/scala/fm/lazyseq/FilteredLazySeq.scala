@@ -19,5 +19,5 @@ package fm.lazyseq
  * Used for LazySeq.filter
  */
 final private class FilteredLazySeq[A](reader: LazySeq[A], pred: A => Boolean) extends LazySeq[A] {
-  final def foreach[U](f: A => U): Unit = for(x <- reader) if(pred(x)) f(x)
+  final def foreach[U](f: A => U): Unit = for (x <- reader) if (pred(x)) f(x)
 }

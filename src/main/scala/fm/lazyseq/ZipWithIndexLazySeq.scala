@@ -20,7 +20,7 @@ package fm.lazyseq
  */
 final private class ZipWithIndexLazySeq[A](reader: LazySeq[A]) extends LazySeq[(A, Int)] {
   final def foreach[U](f: Tuple2[A, Int] => U) {
-    var i = 0
+    var i: Int = 0
     for (x <- reader) {
       f((x, i))
       i += 1

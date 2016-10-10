@@ -43,7 +43,7 @@ final private class BatchedLazySeqIterator[A](reader: LazySeq[A], batchSize: Int
   def next: A = {
     if (!hasNext) throw new NoSuchElementException("No more elements in iterator")
 
-    val res = hd
+    val res: A = hd
     hd = null.asInstanceOf[A]
     hdDefined = false
     

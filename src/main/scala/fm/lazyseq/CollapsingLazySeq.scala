@@ -24,7 +24,7 @@ final private class CollapsingLazySeq[A, K](reader: LazySeq[A], key: A => K, op:
     var current: A = null.asInstanceOf[A]
     
     reader.foreach { next: A =>
-      if(isFirst) {
+      if (isFirst) {
         current = next
         isFirst = false
       } else if (key(current) != key(next)) {
@@ -35,6 +35,6 @@ final private class CollapsingLazySeq[A, K](reader: LazySeq[A], key: A => K, op:
       }
     }
     
-    if(!isFirst) f(current)
+    if (!isFirst) f(current)
   }
 }
