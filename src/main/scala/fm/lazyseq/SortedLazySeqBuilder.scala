@@ -25,7 +25,7 @@ import scala.collection.mutable.Builder
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
 
-private object SortedLazySeqBuilder {
+object SortedLazySeqBuilder {
   def DefaultBufferSizeLimitMB: Int = 100
   def DefaultBufferRecordLimit: Int = 250000
   def DefaultSortAndSaveThreads: Int = 1
@@ -38,7 +38,7 @@ private object SortedLazySeqBuilder {
  * 
  * This should be thread-safe
  */
-final private class SortedLazySeqBuilder[V, K](key: V => K, unique: Boolean = false, bufferSizeLimitMB: Int = SortedLazySeqBuilder.DefaultBufferSizeLimitMB, bufferRecordLimit: Int = SortedLazySeqBuilder.DefaultBufferRecordLimit, sortAndSaveThreads: Int = SortedLazySeqBuilder.DefaultSortAndSaveThreads, sortAndSaveQueueSize: Int = SortedLazySeqBuilder.DefaultSortAndSaveQueueSize)(implicit serializer: Serializer[V], ord: Ordering[K]) extends Builder[V, LazySeq[V]] with Logging {
+final class SortedLazySeqBuilder[V, K](key: V => K, unique: Boolean = false, bufferSizeLimitMB: Int = SortedLazySeqBuilder.DefaultBufferSizeLimitMB, bufferRecordLimit: Int = SortedLazySeqBuilder.DefaultBufferRecordLimit, sortAndSaveThreads: Int = SortedLazySeqBuilder.DefaultSortAndSaveThreads, sortAndSaveQueueSize: Int = SortedLazySeqBuilder.DefaultSortAndSaveQueueSize)(implicit serializer: Serializer[V], ord: Ordering[K]) extends Builder[V, LazySeq[V]] with Logging {
   import serializer._
   
   // Debug flag to disable deletion of tmp files
