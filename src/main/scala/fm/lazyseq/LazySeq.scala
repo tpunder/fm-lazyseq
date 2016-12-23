@@ -67,7 +67,12 @@ object LazySeq {
    * Combine multiple LazySeqs into a single one by sequentially reading each reader
    */
   def apply[T](readers: TraversableOnce[LazySeq[T]]): LazySeq[T] = new MultiLazySeq[T](readers.toIndexedSeq: _*)
-  
+
+  /**
+   * Create an infinite LazySeq containing the given element expression (which is computed for each occurrence).
+   */
+  def continually[T](elem: => T): LazySeq[T] = new ContinuallyLazySeq(elem)
+
   /**
    * Combine multiple LazySeqs into a single one by reading the readers in parallel
    */
