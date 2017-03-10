@@ -183,7 +183,9 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
     }
     result
   }
-  
+
+  final def collect[B](pf: PartialFunction[A, B]): LazySeq[B] = new CollectedLazySeq(this, pf)
+
   final def flatten[B](implicit asTraversable: A => GenTraversableOnce[B]): LazySeq[B] = flatMap{ a => asTraversable(a) }
   
   final def grouped[B >: A](size: Int): LazySeq[IndexedSeq[B]] = new GroupedLazySeq(this, size)
