@@ -18,7 +18,6 @@ package fm.lazyseq
 import java.io.Closeable
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
-import fm.common.Implicits._
 import fm.common.{Resource, SingleUseResource, TaskRunner}
 
 final private class BufferedLazySeq[A](reader: LazySeq[A], size: Int = 1) extends LazySeq[A] with Closeable {

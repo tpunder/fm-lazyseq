@@ -18,7 +18,7 @@ package fm.lazyseq
 import fm.common.Implicits._
 import fm.common.{ByteBufferInputStream, ByteBufferUtil, Logging, ProgressStats, Resource, Serializer, Snappy, TaskRunner, UncloseableOutputStream}
 import java.io._
-import java.nio.{ByteBuffer, MappedByteBuffer}
+import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
 import java.util.{Arrays, Comparator, PriorityQueue}
 import scala.collection.mutable.Builder

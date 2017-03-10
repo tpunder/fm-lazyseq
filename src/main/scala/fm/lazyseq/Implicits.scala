@@ -1,7 +1,7 @@
 package fm.lazyseq
 
 import java.io.{File, IOException}
-import java.nio.file.{Files, FileVisitOption, FileVisitor, FileVisitResult, Path, SimpleFileVisitor}
+import java.nio.file.{Files, FileVisitOption, FileVisitResult, Path, SimpleFileVisitor}
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.EnumSet
 

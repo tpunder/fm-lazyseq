@@ -17,7 +17,6 @@ package fm.lazyseq
 
 import org.scalatest.FunSuite
 import org.scalatest.Matchers
-import java.util.concurrent.TimeUnit
 
 final class TestLazySeqBuilder extends FunSuite with Matchers {
   private trait TestObj
