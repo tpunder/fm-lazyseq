@@ -2,7 +2,7 @@ FMPublic
 
 name := "fm-lazyseq"
 
-version := "0.6.0-SNAPSHOT"
+version := "0.6.0"
 
 description := "LazySeq"
 
@@ -22,6 +22,6 @@ scalacOptions := Seq(
   "-opt:l:project"
 ) else Nil)
 
-libraryDependencies += "com.frugalmechanic" %% "fm-common" % "0.8.0-SNAPSHOT"
+libraryDependencies += "com.frugalmechanic" %% "fm-common" % "0.8.0"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.0" % "test"
