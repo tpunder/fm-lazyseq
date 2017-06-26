@@ -2,8 +2,6 @@ FMPublic
 
 name := "fm-lazyseq"
 
-version := "0.7.0-SNAPSHOT"
-
 description := "LazySeq"
 
 scalaVersion := "2.12.2"
