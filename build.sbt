@@ -22,6 +22,6 @@ scalacOptions := Seq(
   "-opt:l:project"
 ) else Nil)
 
-libraryDependencies += "com.frugalmechanic" %% "fm-common" % "0.8.0"
+libraryDependencies += "com.frugalmechanic" %% "fm-common" % "0.9.0"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.0" % "test"
