@@ -21,6 +21,6 @@ scalacOptions := Seq(
   "-opt-inline-from:<sources>"
 ) else Nil)
 
-libraryDependencies += "com.frugalmechanic" %% "fm-common" % "0.13.0"
+libraryDependencies += "com.frugalmechanic" %% "fm-common" % "0.17.0"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.0" % "test"
