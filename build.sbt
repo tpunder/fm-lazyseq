@@ -4,9 +4,9 @@ name := "fm-lazyseq"
 
 description := "LazySeq"
 
-scalaVersion := "2.12.6"
+scalaVersion := "2.12.7"
 
-crossScalaVersions := Seq("2.11.11", "2.12.6")
+crossScalaVersions := Seq("2.11.11", "2.12.7")
 
 scalacOptions := Seq(
   "-unchecked",
@@ -21,6 +21,6 @@ scalacOptions := Seq(
   "-opt-inline-from:<sources>"
 ) else Nil)
 
-libraryDependencies += "com.frugalmechanic" %% "fm-common" % "0.22.0"
+libraryDependencies += "com.frugalmechanic" %% "fm-common" % "0.26.0"
 
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.0" % "test"
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
