@@ -27,7 +27,7 @@ import scala.collection.mutable.Builder
  * 
  * Methods are synchronized so this should be thread-safe now
  */
-final private class TmpFileLazySeqBuilder[A](deleteTmpFiles: Boolean = true)(implicit serializer: Serializer[A]) extends Builder[A, LazySeq[A]] {
+final class TmpFileLazySeqBuilder[A](deleteTmpFiles: Boolean = true)(implicit serializer: Serializer[A]) extends Builder[A, LazySeq[A]] {
   def this(serializer: Serializer[A]) = this()(serializer)
   
   private[this] val tmpFile: File = File.createTempFile("TmpFileLazySeqBuilder", ".compressed")
