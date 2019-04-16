@@ -38,7 +38,14 @@ object SortedLazySeqBuilder {
  * 
  * This should be thread-safe
  */
-final class SortedLazySeqBuilder[V, K](key: V => K, unique: Boolean = false, bufferSizeLimitMB: Int = SortedLazySeqBuilder.DefaultBufferSizeLimitMB, bufferRecordLimit: Int = SortedLazySeqBuilder.DefaultBufferRecordLimit, sortAndSaveThreads: Int = SortedLazySeqBuilder.DefaultSortAndSaveThreads, sortAndSaveQueueSize: Int = SortedLazySeqBuilder.DefaultSortAndSaveQueueSize)(implicit serializer: Serializer[V], ord: Ordering[K]) extends Builder[V, LazySeq[V]] with Logging {
+final class SortedLazySeqBuilder[V, K](
+  key: V => K,
+  unique: Boolean = false,
+  bufferSizeLimitMB: Int = SortedLazySeqBuilder.DefaultBufferSizeLimitMB,
+  bufferRecordLimit: Int = SortedLazySeqBuilder.DefaultBufferRecordLimit,
+  sortAndSaveThreads: Int = SortedLazySeqBuilder.DefaultSortAndSaveThreads,
+  sortAndSaveQueueSize: Int = SortedLazySeqBuilder.DefaultSortAndSaveQueueSize
+)(implicit serializer: Serializer[V], ord: Ordering[K]) extends Builder[V, LazySeq[V]] with Logging {
   import serializer._
   
   // Debug flag to disable deletion of tmp files
@@ -49,15 +56,15 @@ final class SortedLazySeqBuilder[V, K](key: V => K, unique: Boolean = false, buf
   
   private case class KeyBytesPair(key: K, bytes: Array[Byte])
   
-  private[this] val sortAndSaveTaskRunner = TaskRunner(name="SortedLazySeq-SortAndSave", threads=sortAndSaveThreads, queueSize=sortAndSaveQueueSize)
-  private[this] val stats = ProgressStats.forFasterProcesses()
+  private[this] val sortAndSaveTaskRunner: TaskRunner = TaskRunner(name="SortedLazySeq-SortAndSave", threads=sortAndSaveThreads, queueSize=sortAndSaveQueueSize)
+  private[this] val stats: ProgressStats = ProgressStats.forFasterProcesses()
     
-  private[this] var buffer: Array[KeyBytesPair] = new Array(bufferRecordLimit)
+  private[this] val buffer: Array[KeyBytesPair] = new Array(bufferRecordLimit)
   private[this] var bufferSizeBytes: Int = 0
   private[this] var count: Int = 0
   private[this] val sortAndSaveFutures = Vector.newBuilder[Future[Vector[MappedByteBuffer]]]
   
-  @volatile private[this] var done: Boolean = false
+  private[this] var done: Boolean = false
   
   private[this] val keyBytesOrdering: Ordering[KeyBytesPair] = Ordering.by[KeyBytesPair, K]{ _.key }
   
@@ -84,7 +91,7 @@ final class SortedLazySeqBuilder[V, K](key: V => K, unique: Boolean = false, buf
     require(!done, "Already produced result!")
     done = true
     
-    if(count > 0) flush()
+    if (count > 0) flush()
     
     sortAndSaveTaskRunner.shutdown()
     
@@ -92,17 +99,17 @@ final class SortedLazySeqBuilder[V, K](key: V => K, unique: Boolean = false, buf
     
     val files: Vector[Vector[MappedByteBuffer]] = sortAndSaveFutures.result.map{ Await.result(_, Duration.Inf) }
     
-    if(files.isEmpty) {
+    if (files.isEmpty) {
       LazySeq.empty
     } else {
-      val tmp = new ReadSortedRecords(files)
-      if(unique) tmp.uniqueUsing[K](key) else tmp
+      val tmp: ReadSortedRecords = new ReadSortedRecords(files)
+      if (unique) tmp.uniqueUsing[K](key) else tmp
     }
   }
   
   def clear: Unit = throw new UnsupportedOperationException()
     
-  private def flush() {
+  private def flush(): Unit = {
     // The result needs to be calculated outside of the sortAndSave task
     val result: Array[KeyBytesPair] = Arrays.copyOf(buffer, count)
     
@@ -173,13 +180,13 @@ final class SortedLazySeqBuilder[V, K](key: V => K, unique: Boolean = false, buf
     def foreach[U](f: V => U): Unit = Resource.using(makeBufferedRecordReaders()) { readers =>
       val pq: PriorityQueue[BufferedRecordReader] = makePriorityQueue()
 
-      readers.foreach{ r => if(!r.isEmpty) pq.add(r) }
+      readers.foreach{ r => if (!r.isEmpty) pq.add(r) }
       
       while(pq.size > 0) {
         val reader: BufferedRecordReader = pq.poll()
         val value: V = reader.pop()
          
-        if(reader.isEmpty) reader.close() else pq.add(reader)
+        if (reader.isEmpty) reader.close() else pq.add(reader)
         
         f(value)
       }
@@ -233,8 +240,8 @@ final class SortedLazySeqBuilder[V, K](key: V => K, unique: Boolean = false, buf
       var totalBytesRead: Int = 0
       while(totalBytesRead < size) {
         val n = is.read(bytes, totalBytesRead, size - totalBytesRead)
-        if(-1 === n) {
-          if(totalBytesRead > 0) logger.error("Unexpected EOFException.  Expected to read "+size+" bytes but only got "+totalBytesRead+" bytes before EOF")
+        if (-1 === n) {
+          if (totalBytesRead > 0) logger.error("Unexpected EOFException.  Expected to read "+size+" bytes but only got "+totalBytesRead+" bytes before EOF")
           throw new EOFException()
         }
         totalBytesRead += n
@@ -251,7 +258,7 @@ final class SortedLazySeqBuilder[V, K](key: V => K, unique: Boolean = false, buf
         
         _cache = deserialize(bytes)
 
-        if(null == _cache) {
+        if (null == _cache) {
           _isEmpty = true
           _keyCache = null.asInstanceOf[K]
         } else {

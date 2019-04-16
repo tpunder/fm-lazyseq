@@ -51,7 +51,7 @@ final class TmpFileLazySeqBuilder[A](deleteTmpFiles: Boolean = true)(implicit se
   // TODO: find a better way?
   def +=(elem: A): this.type = synchronized {
     require(!done, "Already produced result!  Cannot add additional elements!")
-    if(null == writer) writer = new DataOutputStream(new BufferedOutputStream(Snappy.newSnappyOrGzipOutputStream(UncloseableOutputStream(new FileOutputStream(raf.getFD)))))
+    if (null == writer) writer = new DataOutputStream(new BufferedOutputStream(Snappy.newSnappyOrGzipOutputStream(UncloseableOutputStream(new FileOutputStream(raf.getFD)))))
     val bytes: Array[Byte] = serializer.serialize(elem)
     require(bytes.length < Int.MaxValue)
     writer.writeInt(bytes.length)
@@ -62,7 +62,7 @@ final class TmpFileLazySeqBuilder[A](deleteTmpFiles: Boolean = true)(implicit se
   def result: LazySeq[A] = synchronized {
     require(!done, "Already produced result!")
     done = true
-    if(null == writer) EmptyLazySeq else {
+    if (null == writer) EmptyLazySeq else {
       writer.flush()
       writer.close()
       writer = null

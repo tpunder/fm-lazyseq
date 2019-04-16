@@ -67,7 +67,7 @@ final class TestSortedLazySeq extends FunSuite with Matchers {
   }
 
   def checkLazySeqStringSort(it: Iterable[String], result: Iterable[String], unique: Boolean = false) {
-    val reader = if(unique) LazySeq.wrap(it).uniqueSorted else LazySeq.wrap(it).sorted
+    val reader: LazySeq[String] = if (unique) LazySeq.wrap(it).uniqueSorted else LazySeq.wrap(it).sorted
     reader.toIndexedSeq should equal(result.toIndexedSeq)
   }
   
@@ -76,13 +76,13 @@ final class TestSortedLazySeq extends FunSuite with Matchers {
   }
   
   def checkLazySeqLongSort(it: Iterable[Long], result: Iterable[Long], unique: Boolean = false) {
-    val reader: LazySeq[Long] = if(unique) LazySeq.wrap(it).uniqueSorted else LazySeq.wrap(it).sorted
+    val reader: LazySeq[Long] = if (unique) LazySeq.wrap(it).uniqueSorted else LazySeq.wrap(it).sorted
     
     def check(): Unit = {
-      val stats = new ProgressStats
-      (reader.toSeq.view zip result.view).foreach{ case (a,b) => 
-        stats.increment
-        assert(a.toLong == b, "Expected "+a+" to equal "+b)
+      val stats: ProgressStats = new ProgressStats()
+      (reader.toSeq.view zip result.view).foreach{ case (a: Long, b: Long) =>
+        stats.increment()
+        assert(a == b, "Expected "+a+" to equal "+b)
       }
       stats.finalStats
     }

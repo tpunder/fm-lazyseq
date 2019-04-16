@@ -247,7 +247,7 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
     
     foreach { a: A =>
       val key: K = f(a)
-      if(!map.contains(key)) map.updated(key, new TmpFileLazySeqBuilder)
+      if (!map.contains(key)) map = map.updated(key, new TmpFileLazySeqBuilder)
       map(key) += a
     }
     
@@ -428,7 +428,7 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
   final def find(p: A => Boolean): Option[A] = {
     var result: Option[A] = None
     breakable {
-      for (x <- this) if(p(x)) { result = Some(x); break }
+      for (x <- this) if (p(x)) { result = Some(x); break }
     }
     result
   }
@@ -436,7 +436,7 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
   final def forall(p: A => Boolean): Boolean = {
     var result: Boolean = true
     breakable {
-      for (x <- this) if(!p(x)) { result = false; break }
+      for (x <- this) if (!p(x)) { result = false; break }
     }
     result
   }

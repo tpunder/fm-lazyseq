@@ -22,11 +22,24 @@ import fm.common.Serializer
  * 
  * The sorting is done once on the first invocation of foreach() and then the temp files can be re-read multiple times without having to re-sort.
  */
-final private class SortedLazySeq[V, K](reader: LazySeq[V], key: V => K, unique: Boolean = false, bufferSizeLimitMB: Int = SortedLazySeqBuilder.DefaultBufferSizeLimitMB, bufferRecordLimit: Int = SortedLazySeqBuilder.DefaultBufferRecordLimit)(implicit serializer: Serializer[V], ord: Ordering[K]) extends LazySeq[V] {
+final private class SortedLazySeq[V, K](
+  reader: LazySeq[V],
+  key: V => K,
+  unique: Boolean = false,
+  bufferSizeLimitMB: Int = SortedLazySeqBuilder.DefaultBufferSizeLimitMB,
+  bufferRecordLimit: Int = SortedLazySeqBuilder.DefaultBufferRecordLimit
+)(implicit serializer: Serializer[V], ord: Ordering[K]) extends LazySeq[V] {
+
   final def foreach[U](f: V => U): Unit = sortedReader.foreach(f)
 
   private lazy val sortedReader: LazySeq[V] = {
-    val builder = new SortedLazySeqBuilder(key = key, unique = unique, bufferSizeLimitMB = bufferSizeLimitMB, bufferRecordLimit = bufferRecordLimit)
+    val builder: SortedLazySeqBuilder[V, K] = new SortedLazySeqBuilder(
+      key = key,
+      unique = unique,
+      bufferSizeLimitMB = bufferSizeLimitMB,
+      bufferRecordLimit = bufferRecordLimit
+    )
+
     builder ++= reader
     builder.result
   }
