@@ -16,7 +16,7 @@
 package fm.lazyseq
 
 import scala.collection.{GenTraversableOnce, TraversableOnce}
-import scala.collection.generic.{CanBuildFrom, Growable, FilterMonadic}
+import scala.collection.generic.{CanBuildFrom, FilterMonadic, Growable}
 import scala.util.control.Breaks
 import java.util.Random
 import fm.common.Implicits._
@@ -457,7 +457,10 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
 
   def toIterator: LazySeqIterator[A] = new BatchedLazySeqIterator(this)
   
-  def toIterator(batchSize: Int = 32, bufferSize: Int = 0): LazySeqIterator[A] = new BatchedLazySeqIterator(this, batchSize = batchSize, bufferSize = bufferSize)
+  def toIterator(batchSize: Int = 32, bufferSize: Int = 0): LazySeqIterator[A] = {
+    if (batchSize <= 1) new BufferedLazySeq[A](this, bufferSize).iterator
+    else new BatchedLazySeqIterator(this, batchSize = batchSize, bufferSize = bufferSize)
+  }
   
   def toStream: Stream[A] = toIterator.toStream
   
