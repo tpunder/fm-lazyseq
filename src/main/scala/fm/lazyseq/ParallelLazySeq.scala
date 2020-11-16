@@ -20,7 +20,7 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
 import fm.common.{Resource, SingleUseResource, TaskRunner}
 
-final private class BufferedLazySeq[A](reader: LazySeq[A], size: Int = 1) extends LazySeq[A] with Closeable {
+final class BufferedLazySeq[A](reader: LazySeq[A], size: Int = 1) extends LazySeq[A] with Closeable {
   private def builder: LazySeqBuilder[A] = new LazySeqBuilder[A](size).withProducerThread{ growable => reader.foreach{ growable += _ } }
   
   final def foreach[U](f: A => U): Unit = builder.lazySeq.foreach{ f }
