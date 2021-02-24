@@ -15,6 +15,7 @@
  */
 package fm.lazyseq
 
+import java.util.concurrent.TimeUnit
 import org.scalatest.FunSuite
 import org.scalatest.Matchers
 
@@ -192,5 +193,86 @@ final class TestLazySeqBuilder extends FunSuite with Matchers {
     }
     
     builder.awaitProducer()
+  }
+
+  test("grouped with timeout") {
+    val builder = newBuilder(queueSize = 5)
+
+    builder.withProducerThread { growable =>
+      growable += Foo
+      growable += Bar
+      Thread.sleep(1000)
+      growable += Baz
+      Thread.sleep(1000)
+      growable += Foo
+      growable += Bar
+      growable += Baz
+      growable += Foo
+      growable += Bar
+      growable += Baz
+      Thread.sleep(1000)
+    }
+
+    val it: LazySeqIterator[IndexedSeq[TestObj]] = builder.lazySeq.grouped(4, 100, TimeUnit.MILLISECONDS).iterator
+
+    it.hasNext shouldBe true
+    it.next shouldBe Vector(Foo, Bar)
+    it.hasNext shouldBe true
+    it.next shouldBe Vector(Baz)
+    it.hasNext shouldBe true
+    it.next shouldBe Vector(Foo, Bar, Baz, Foo)
+    it.hasNext shouldBe true
+    it.next shouldBe Vector(Bar, Baz)
+    it.hasNext shouldBe false
+  }
+
+  test("grouped with timeout - exception") {
+    val builder = newBuilder(queueSize = 5)
+
+    builder.withProducerThread { growable =>
+      growable += Foo
+      growable += Bar
+      Thread.sleep(1000)
+      growable += Baz
+      Thread.sleep(1000)
+      growable += Foo
+      growable += Bar
+      growable += Baz
+      growable += Foo
+      growable += Bar
+      growable += Baz
+      throw new Exception("foo")
+    }
+
+    val it: LazySeqIterator[IndexedSeq[TestObj]] = builder.lazySeq.grouped(4, 100, TimeUnit.MILLISECONDS).iterator
+
+    // These should succeed
+    it.hasNext shouldBe true
+    it.next shouldBe Vector(Foo, Bar)
+    it.hasNext shouldBe true
+    it.next shouldBe Vector(Baz)
+
+    // Somewhere in this code block we should end up with the AbortedException depending on how the timing works out
+    intercept[LazySeqBuilder.AbortedException] {
+      it.hasNext shouldBe true
+      it.next shouldBe Vector(Foo, Bar, Baz, Foo)
+      it.hasNext shouldBe true
+      it.next shouldBe Vector(Bar, Baz)
+      it.hasNext shouldBe false
+    }
+  }
+
+  test("grouped with timeout - empty") {
+    val builder = newBuilder(queueSize = 5)
+
+    builder.withProducerThread { growable =>
+      // Do nothing
+    }
+
+    val it: LazySeqIterator[IndexedSeq[TestObj]] = builder.lazySeq.grouped(4, 100, TimeUnit.MILLISECONDS).iterator
+
+    it.hasNext shouldBe false
+    intercept[NoSuchElementException] { it.next }
+    intercept[NoSuchElementException] { it.head }
   }
 }

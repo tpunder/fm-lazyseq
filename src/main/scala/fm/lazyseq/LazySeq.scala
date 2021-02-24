@@ -21,6 +21,7 @@ import scala.util.control.Breaks
 import java.util.Random
 import fm.common.Implicits._
 import fm.common.{Resource, Serializer, TaskRunner}
+import java.util.concurrent.BlockingQueue
 
 object LazySeq {
   /**
@@ -319,9 +320,18 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
   }
   
   /**
-   * Creates an asynchronous buffer that spins up a producer thread which feeds data into a BlockingQueue that is read using the resulting LazySeq.
+   * Creates an asynchronous buffer that spins up a producer thread which feeds data into a BlockingQueue that is read
+   * using the resulting LazySeq. The created BlockingQueue will depend on the size passed in. If the size is <= 0 then
+   * a SynchronousQueue otherwise an ArrayBlockingQueue is used.
    */
-  final def buffered(size: Int = 0): LazySeq[A] = new BufferedLazySeq[A](this, size)
+  final def buffered(size: Int): BufferedLazySeq[A] = BufferedLazySeq[A](this, size)
+
+  /**
+   * Creates an asynchronous buffer that spins up a producer thread which feeds data into a BlockingQueue that is read
+   * using the resulting LazySeq. This overload lets you pass in your own BlockingQueue implementation instead of having
+   * one created for you.
+   */
+  final def buffered[B >: A](queue: BlockingQueue[B]): BufferedLazySeq[B] = BufferedLazySeq[B](this, queue)
   
   /**
    * Performs a parallel map maintaining ordered output
@@ -458,7 +468,7 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
   def toIterator: LazySeqIterator[A] = new BatchedLazySeqIterator(this)
   
   def toIterator(batchSize: Int = 32, bufferSize: Int = 0): LazySeqIterator[A] = {
-    if (batchSize <= 1) new BufferedLazySeq[A](this, bufferSize).iterator
+    if (batchSize <= 1) BufferedLazySeq[A](this, bufferSize).iterator
     else new BatchedLazySeqIterator(this, batchSize = batchSize, bufferSize = bufferSize)
   }
   

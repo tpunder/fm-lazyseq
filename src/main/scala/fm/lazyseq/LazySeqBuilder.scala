@@ -23,9 +23,12 @@ import java.util.concurrent.{ArrayBlockingQueue, BlockingQueue, CountDownLatch, 
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 import scala.collection.generic.Growable
 import scala.collection.mutable.Builder
+import scala.concurrent.duration.FiniteDuration
 
 object LazySeqBuilder {
   final class AbortedException() extends Exception("LazySeqBuilder has been aborted!")
+
+  private val MaxPollTimeMillis: Int = 100
   
   private[this] val _uniqueIdAtomicInteger: AtomicInteger = new AtomicInteger(0)
   private def nextUniqueId(): Int = _uniqueIdAtomicInteger.incrementAndGet()
@@ -35,23 +38,39 @@ object LazySeqBuilder {
  * A LazySeq producer/consumer pair that uses a BlockingQueue
  * 
  * I think this is Thread-Safe
+ *
+ * 2021-02-19 - This was updated to allow passing in an arbitrary BlockingQueue implementation (e.g. an
+ *              LMDBBlockingDeque for using an off-heap disk-backed queue). I removed the END_OF_QUEUE marker so that
+ *              the BlockingQueue could be typed as a BlockingQueue[A] instead of an BlockingQueue[AnyRef] to make
+ *              serialization in LMDBBlockingDeque work better.
+ *
+ *              It looks like there is a lot of cleanup potential in this class. After some original threading problems
+ *              around handling exceptions in the Producer and Consumer threads it looks like I went a little overboard
+ *              on error handling. There is probably room for a lot of simplification.
  */
-final class LazySeqBuilder[A](queueSize: Int = 16, shutdownJVMOnUncaughtException: Boolean = false) extends Builder[A, LazySeq[A]] with Closeable with Logging { builder =>
-  import LazySeqBuilder.AbortedException
-  private[this] val END_OF_QUEUE: AnyRef = new Object{}
+final class LazySeqBuilder[A](queue: BlockingQueue[A], shutdownJVMOnUncaughtException: Boolean = false) extends Builder[A, LazySeq[A]] with Closeable with Logging { builder =>
+  def this(queueSize: Int, shutdownJVMOnUncaughtException: Boolean) = this(if (queueSize > 0) new ArrayBlockingQueue[A](queueSize) else new SynchronousQueue[A](), shutdownJVMOnUncaughtException)
+  def this(queueSize: Int) = this(queueSize, false)
+  def this() = this(16, false)
+
+  import LazySeqBuilder.{AbortedException, MaxPollTimeMillis}
   
   protected val uniqueId: Int = LazySeqBuilder.nextUniqueId()
   
   private class Aborted extends Throwable
-  
-  private[this] val queue: BlockingQueue[AnyRef] = if (queueSize > 0) new ArrayBlockingQueue[AnyRef](queueSize) else new SynchronousQueue[AnyRef]()
+
+  def queueSize: Int = queue.size()
   
   def +=(v: A): this.type = {
     abortCheck()
     
     if (closed) closedWarning
     else if (Thread.interrupted()) throw new InterruptedException
-    else queue.put(v.asInstanceOf[AnyRef])
+    else {
+      while (!closed && !aborting && !queue.offer(v, MaxPollTimeMillis, TimeUnit.MILLISECONDS)) {
+        // Loop until we successfully insert into the queue (and are not closed or aborting)
+      }
+    }
     
     abortCheck()
     
@@ -118,14 +137,8 @@ final class LazySeqBuilder[A](queueSize: Int = 16, shutdownJVMOnUncaughtExceptio
     // Only call closeProducer()/abortProducer() once
     if (!closingOrAbortingProducer.compareAndSet(false, true)) return
     
-    logger.debug(s"${uniqueId} closeProducer() ...")
-    
-    if (!closed) {
-      logger.debug(s"${uniqueId} closeProducer() - queue.put(END_OF_QUEUE) ...")
-      queue.put(END_OF_QUEUE)
-      logger.debug(s"${uniqueId} closeProducer() - queue.put(END_OF_QUEUE) ... SUCCESS!")
-      closed = true
-    }
+    logger.debug(s"${uniqueId} closeProducer()")
+    closed = true
     
     val pt: ProducerThread = producerThread
     
@@ -147,19 +160,7 @@ final class LazySeqBuilder[A](queueSize: Int = 16, shutdownJVMOnUncaughtExceptio
     logger.debug(s"${uniqueId} abortProducer() ...")
 
     aborting = true
-
-    if (!closed) {
-      if (queue.isInstanceOf[SynchronousQueue[A]]) {
-        // If this is a SynchronousQueue (which as a capacity of 0) then we need to make sure we have a timeout
-        // otherwise we could be trying to insert forever
-        queue.offer(END_OF_QUEUE, 1000, TimeUnit.MILLISECONDS)
-      } else {
-        // Remove items from the queue until we have room to add END_OF_QUEUE to it
-        while(!queue.offer(END_OF_QUEUE)) queue.poll()
-      }
-      
-      closed = true
-    }
+    closed = true
     
     val pt: ProducerThread = producerThread
     if (null != pt && Thread.currentThread() != pt) {
@@ -230,17 +231,13 @@ final class LazySeqBuilder[A](queueSize: Int = 16, shutdownJVMOnUncaughtExceptio
     
     // If there is anything remaining in the queue lets drain it to unblock any producers
     if (null != queue.poll()) {
-      while(null != queue.poll(100, TimeUnit.MILLISECONDS)) { }
+      while (null != queue.poll(MaxPollTimeMillis, TimeUnit.MILLISECONDS)) { }
     }
-    
-    // Since we might have drained the END_OF_QUEUE marker lets offer that back
-    // to avoid blocking any consumers.
-    queue.offer(END_OF_QUEUE, 100, TimeUnit.MILLISECONDS)
 
     logger.debug(s"${uniqueId} abortConsumer() ... DONE!")
   }
   
-  object lazySeq extends LazySeq[A] with Closeable { reader =>
+  object lazySeq extends BufferedLazySeq[A] with Closeable { reader =>
     private[this] var hd: AnyRef = null
     private[this] var hdDefined: Boolean = false
     
@@ -263,30 +260,87 @@ final class LazySeqBuilder[A](queueSize: Int = 16, shutdownJVMOnUncaughtExceptio
       abortCheck()
       
       if (!hdDefined) {
-        hd = queue.take()
+
+        // Try first without waiting to see if there is anything in the queue. This handles the case of where we are
+        // closed (i.e. no more writes are happening to the queue) and we just want to quickly check if there is
+        // anything left in the queue.
+        hd = queue.poll().asInstanceOf[AnyRef]
+
+        // If we got nothing from the queue then (as long as we are not closed or aborting) we loop checking for new
+        // data in the queue until we either get something or the closed and/or aborting flags are set. We wait a max
+        // of 100ms for new data before re-checking the closed and aborting flags.
+        while (null == hd && !closed && !aborting) {
+          hd = queue.poll(MaxPollTimeMillis, TimeUnit.MILLISECONDS).asInstanceOf[AnyRef]
+        }
+
+        // If we got back null (due to a timeout) and the closed or aborting flags are now set to true then let's
+        // check one more time to make sure we didn't missing something in the queue (e.g. between the time the timeout
+        // happened and any closed/aborting flag got set).
+        if (null == hd && (closed || aborting)) {
+          hd = queue.poll().asInstanceOf[AnyRef]
+        }
+
+        // There are 2 possible states here:
+        // null == hd - We have reached the end of the Queue and do not need to check it again.
+        // null != hd - We successfully read from the queue. hdDefined will be set to false when next is called.
         hdDefined = true
         abortCheck()
       }
-      
-      hd ne END_OF_QUEUE
+
+      null != hd
+    }
+
+    def hasNext(duration: FiniteDuration): Option[Boolean] = hasNext(duration.length, duration.unit)
+
+    /**
+     * A version of hasNext with a timeout
+     * @param timeout
+     * @param unit
+     * @return None if we hit our timeout, otherwise a Some instance with the actual result
+     */
+    def hasNext(timeout: Long, unit: TimeUnit): Option[Boolean] = {
+      abortCheck()
+
+      // If hd is already defined then there is nothing for us to do
+      if (hdDefined) return Some.cached(null != hd)
+
+      hd = queue.poll(timeout, unit).asInstanceOf[AnyRef]
+
+      // If hd is null here then we hit the timeout. If we are also closed or aborting let's do a final poll() to make
+      // sure we didn't missing anything.
+      if (null == hd && (closed || aborting)) {
+        hd = queue.poll(timeout, unit).asInstanceOf[AnyRef]
+        // If we are still null then we have hit the end of the queue
+        if (null == hd) {
+          hdDefined = true
+          return Some.cached(false)
+        }
+      }
+
+      // If we are null at this point then we timed out, otherwise we have a value set
+      if (null == hd) {
+        None
+      } else {
+        hdDefined = true
+        Some.cached(true)
+      }
     }
     
-    def close() {
-      logger.debug(s"${uniqueId} resourceReader.close() ...")
-      builder.abortProducer()
-      builder.abortConsumer()
-      logger.debug(s"${uniqueId} resourceReader.close() ... DONE!")
+    def close(): Unit = {
+      builder.close()
     }
     
-    object iterator extends LazySeqIterator[A] {
-      def hasNext: Boolean = reader.hasNext
-      def head: A = reader.head
-      def next: A = reader.next
-      def close(): Unit = reader.close()
+    object iterator extends BufferedLazySeqIterator[A] {
+      override def hasNext: Boolean = reader.hasNext
+      override def hasNext(duration: FiniteDuration): Option[Boolean] = reader.hasNext(duration)
+      override def hasNext(timeout: Long, unit: TimeUnit): Option[Boolean] = reader.hasNext(timeout, unit)
+      override def head: A = reader.head
+      override def next: A = reader.next
+      override def close(): Unit = reader.close()
     }
     
     final def foreach[U](f: A => U): Unit = try {
-      while(hasNext) f(next)
+      while (hasNext) f(next)
     } catch {
       case ex: Throwable => 
         logger.warn("Caught Exception running LazySeqBuilder.foreach().  Aborting...", ex)

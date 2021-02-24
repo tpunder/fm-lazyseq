@@ -15,18 +15,9 @@
  */
 package fm.lazyseq
 
-import java.io.Closeable
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
 import fm.common.{Resource, SingleUseResource, TaskRunner}
-
-final class BufferedLazySeq[A](reader: LazySeq[A], size: Int = 1) extends LazySeq[A] with Closeable {
-  private def builder: LazySeqBuilder[A] = new LazySeqBuilder[A](size).withProducerThread{ growable => reader.foreach{ growable += _ } }
-  
-  final def foreach[U](f: A => U): Unit = builder.lazySeq.foreach{ f }
-  final def iterator: LazySeqIterator[A] = builder.lazySeq.iterator
-  final def close(): Unit = builder.close()
-}
 
 final private class ParallelMapLazySeq[A, B](reader: LazySeq[A], map: A => B, threads: Int = 8, inputBuffer: Int = 8, resultBuffer: Int = 8) extends LazySeq[B] {
   
