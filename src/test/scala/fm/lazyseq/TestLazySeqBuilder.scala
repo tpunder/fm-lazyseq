@@ -254,11 +254,7 @@ final class TestLazySeqBuilder extends FunSuite with Matchers {
 
     // Somewhere in this code block we should end up with the AbortedException depending on how the timing works out
     intercept[LazySeqBuilder.AbortedException] {
-      it.hasNext shouldBe true
-      it.next shouldBe Vector(Foo, Bar, Baz, Foo)
-      it.hasNext shouldBe true
-      it.next shouldBe Vector(Bar, Baz)
-      it.hasNext shouldBe false
+      while (it.hasNext) it.next
     }
   }
 
