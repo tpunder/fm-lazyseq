@@ -1,5 +1,3 @@
-FMPublic
-
 name := "fm-lazyseq"
 
 description := "LazySeq"
@@ -24,3 +22,5 @@ scalacOptions := Seq(
 libraryDependencies += "com.frugalmechanic" %% "fm-common" % "0.50.0"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
+
+publishTo := sonatypePublishToBundle.value
