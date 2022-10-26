@@ -57,7 +57,10 @@ final class SortedLazySeqBuilder[V, K](
   private case class KeyBytesPair(key: K, bytes: Array[Byte])
   
   private[this] val sortAndSaveTaskRunner: TaskRunner = TaskRunner(name="SortedLazySeq-SortAndSave", threads=sortAndSaveThreads, queueSize=sortAndSaveQueueSize)
+
+  // We only show stats if INFO is enabled for this logger
   private[this] val stats: ProgressStats = ProgressStats.forFasterProcesses()
+  stats.hide = !logger.isInfoEnabled
     
   private[this] val buffer: Array[KeyBytesPair] = new Array(bufferRecordLimit)
   private[this] var bufferSizeBytes: Int = 0
@@ -95,7 +98,7 @@ final class SortedLazySeqBuilder[V, K](
     
     sortAndSaveTaskRunner.shutdown()
     
-    stats.finalStats
+    if (logger.isInfoEnabled) stats.finalStats
     
     val files: Vector[Vector[MappedByteBuffer]] = sortAndSaveFutures.result.map{ Await.result(_, Duration.Inf) }
     
