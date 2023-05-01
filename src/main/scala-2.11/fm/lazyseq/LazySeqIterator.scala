@@ -22,5 +22,5 @@ trait LazySeqIterator[+A] extends scala.collection.BufferedIterator[A] with Clos
   def hasNext: Boolean
   def head: A
   final def headOption: Option[A] = if (hasNext) Some(head) else None
-  def next: A
+  def next(): A
 }

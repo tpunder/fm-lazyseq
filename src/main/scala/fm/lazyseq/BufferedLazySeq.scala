@@ -77,14 +77,14 @@ final class BufferedGroupedLazySeq[+A](self: BufferedLazySeqIterator[A], size: I
     override def close(): Unit = self.close()
     override def hasNext: Boolean = outer.hasNext
     override def head: IndexedSeq[A] = outer.head
-    override def next: IndexedSeq[A] = outer.next
+    override def next(): IndexedSeq[A] = outer.next()
   }
 
   override def head: IndexedSeq[A] = {
     if (!hasNext) throw new NoSuchElementException("No more elements in iterator") else hd
   }
 
-  def next: IndexedSeq[A] = {
+  def next(): IndexedSeq[A] = {
     if (!hasNext) throw new NoSuchElementException("No more elements in iterator")
     val res: IndexedSeq[A] = hd
     hd = null
@@ -106,7 +106,7 @@ final class BufferedGroupedLazySeq[+A](self: BufferedLazySeqIterator[A], size: I
           count += increment
         }
 
-        add(self.next)
+        add(self.next())
 
         val start: Long = System.nanoTime()
         var remaining: Long = remainingNanos(start)
@@ -114,7 +114,7 @@ final class BufferedGroupedLazySeq[+A](self: BufferedLazySeqIterator[A], size: I
         while (count < size && remaining > 0L) {
           self.hasNext(remaining, TimeUnit.NANOSECONDS) match {
             case Some(true)  =>
-              add(self.next) // Check for next
+              add(self.next()) // Check for next
               remaining = remainingNanos(start)
 
             case Some(false) => remaining = 0L // End of queue - we should exit loop and process current batch
@@ -131,7 +131,7 @@ final class BufferedGroupedLazySeq[+A](self: BufferedLazySeqIterator[A], size: I
 
   override def foreach[U](f: IndexedSeq[A] => U): Unit = {
     while (hasNext) {
-      f(next)
+      f(next())
     }
   }
 

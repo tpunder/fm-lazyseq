@@ -19,11 +19,11 @@ package fm.lazyseq
  * Folds duplicate records that are next to each other based on a key within that record
  */
 final private class CollapsingLazySeq[A, K](reader: LazySeq[A], key: A => K, op: (A, A) => A) extends LazySeq[A] {
-  def foreach[U](f: A => U) {
+  def foreach[U](f: A => U): Unit = {
     var isFirst: Boolean = true
     var current: A = null.asInstanceOf[A]
     
-    reader.foreach { next: A =>
+    reader.foreach { (next: A) =>
       if (isFirst) {
         current = next
         isFirst = false

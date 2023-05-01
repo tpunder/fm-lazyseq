@@ -34,7 +34,7 @@ final private class ParallelMapLazySeq[A, B](reader: LazySeq[A], map: A => B, th
         // Our producer thread:
         builder.withProducerThread { growable =>
           try {
-            reader.foreach { a: A =>
+            reader.foreach { (a: A) =>
               val future: Future[B] = taskRunner.submit { map(a) }
               growable += future
             }
@@ -46,7 +46,7 @@ final private class ParallelMapLazySeq[A, B](reader: LazySeq[A], map: A => B, th
         }
         
         // Our consumer
-        builder.lazySeq.foreach { future: Future[B] => f(Await.result(future, Duration.Inf)) }
+        builder.lazySeq.foreach { (future: Future[B]) => f(Await.result(future, Duration.Inf)) }
       }}
     } catch {
       case aborted: LazySeqBuilder.AbortedException => exception match {

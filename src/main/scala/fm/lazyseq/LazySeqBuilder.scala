@@ -15,14 +15,12 @@
  */
 package fm.lazyseq
 
-import fm.common.Logging
+import fm.common.{BuilderCompat, Logging}
 import fm.common.Implicits._
 import java.io.Closeable
 import java.nio.channels.ClosedByInterruptException
 import java.util.concurrent.{ArrayBlockingQueue, BlockingQueue, CountDownLatch, SynchronousQueue, TimeUnit}
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
-import scala.collection.generic.Growable
-import scala.collection.mutable.Builder
 import scala.concurrent.duration.FiniteDuration
 
 object LazySeqBuilder {
@@ -48,7 +46,7 @@ object LazySeqBuilder {
  *              around handling exceptions in the Producer and Consumer threads it looks like I went a little overboard
  *              on error handling. There is probably room for a lot of simplification.
  */
-final class LazySeqBuilder[A](queue: BlockingQueue[A], shutdownJVMOnUncaughtException: Boolean = false) extends Builder[A, LazySeq[A]] with Closeable with Logging { builder =>
+final class LazySeqBuilder[A](queue: BlockingQueue[A], shutdownJVMOnUncaughtException: Boolean = false) extends BuilderCompat[A, LazySeq[A]] with Closeable with Logging { builder =>
   def this(queueSize: Int, shutdownJVMOnUncaughtException: Boolean) = this(if (queueSize > 0) new ArrayBlockingQueue[A](queueSize) else new SynchronousQueue[A](), shutdownJVMOnUncaughtException)
   def this(queueSize: Int) = this(queueSize, false)
   def this() = this(16, false)
@@ -61,7 +59,7 @@ final class LazySeqBuilder[A](queue: BlockingQueue[A], shutdownJVMOnUncaughtExce
 
   def queueSize: Int = queue.size()
   
-  def +=(v: A): this.type = {
+  override def addOne(v: A): this.type = {
     abortCheck()
     
     if (closed) closedWarning
@@ -236,8 +234,13 @@ final class LazySeqBuilder[A](queue: BlockingQueue[A], shutdownJVMOnUncaughtExce
 
     logger.debug(s"${uniqueId} abortConsumer() ... DONE!")
   }
-  
-  object lazySeq extends BufferedLazySeq[A] with Closeable { reader =>
+
+  // Note: This was originally "object lazySeq ..." but that caused some weird Scala 3 compiler error. This pattern
+  // should be similar.
+  lazy val lazySeq: lazySeq = new lazySeq()
+
+  //object lazySeq extends BufferedLazySeq[A] with Closeable { reader =>
+  class lazySeq private[lazyseq]() extends BufferedLazySeq[A] with Closeable { reader =>
     private[this] var hd: AnyRef = null
     private[this] var hdDefined: Boolean = false
     
@@ -248,7 +251,7 @@ final class LazySeqBuilder[A](queue: BlockingQueue[A], shutdownJVMOnUncaughtExce
     
     override def headOption: Option[A] = if (hasNext) Some(head) else None
     
-    def next: A = {      
+    def next(): A = {
       if (!hasNext) throw new NoSuchElementException("No more elements in iterator")
       val res: A = hd.asInstanceOf[A]
       hd = null
@@ -335,12 +338,12 @@ final class LazySeqBuilder[A](queue: BlockingQueue[A], shutdownJVMOnUncaughtExce
       override def hasNext(duration: FiniteDuration): Option[Boolean] = reader.hasNext(duration)
       override def hasNext(timeout: Long, unit: TimeUnit): Option[Boolean] = reader.hasNext(timeout, unit)
       override def head: A = reader.head
-      override def next: A = reader.next
+      override def next(): A = reader.next()
       override def close(): Unit = reader.close()
     }
     
     final def foreach[U](f: A => U): Unit = try {
-      while (hasNext) f(next)
+      while (hasNext) f(next())
     } catch {
       case ex: Throwable => 
         logger.warn("Caught Exception running LazySeqBuilder.foreach().  Aborting...", ex)
@@ -378,7 +381,7 @@ final class LazySeqBuilder[A](queue: BlockingQueue[A], shutdownJVMOnUncaughtExce
   /**
    * Wait for both the producer and consumer threads (if any) to finish
    */
-  def await() {
+  def await(): Unit = {
     awaitProducer()
     awaitConsumer()
   }
@@ -386,7 +389,7 @@ final class LazySeqBuilder[A](queue: BlockingQueue[A], shutdownJVMOnUncaughtExce
   /**
    * Wait for the producer thread (if any) to finish
    */
-  def awaitProducer() {
+  def awaitProducer(): Unit = {
     logger.debug(s"${uniqueId} awaitProducer() ...")
     val pt: ProducerThread = producerThread
     if (null != pt) {
@@ -399,7 +402,7 @@ final class LazySeqBuilder[A](queue: BlockingQueue[A], shutdownJVMOnUncaughtExce
   /**
    * Wait for the consumer thread (if any) to finish
    */
-  def awaitConsumer() {
+  def awaitConsumer(): Unit = {
     logger.debug(s"${uniqueId} awaitConsumer() ...")
     val ct: ConsumerThread = consumerThread
     if (null != ct) {
@@ -435,7 +438,7 @@ final class LazySeqBuilder[A](queue: BlockingQueue[A], shutdownJVMOnUncaughtExce
     
     // This shouldn't be called, but it's here just in case
     setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler{
-      def uncaughtException(t: Thread, e: Throwable) {
+      override def uncaughtException(t: Thread, e: Throwable): Unit = {
         logger.error("Uncaught Exception", e)
         if (shutdownJVMOnUncaughtException) {
           logger.error("Shutting down JVM")
@@ -469,7 +472,7 @@ final class LazySeqBuilder[A](queue: BlockingQueue[A], shutdownJVMOnUncaughtExce
     
     // This shouldn't be called, but it's here just in case
     setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler{
-      def uncaughtException(t: Thread, e: Throwable) {
+      override def uncaughtException(t: Thread, e: Throwable): Unit = {
         logger.error("Uncaught Exception", e)
         if (shutdownJVMOnUncaughtException) {
           logger.error("Shutting down JVM")

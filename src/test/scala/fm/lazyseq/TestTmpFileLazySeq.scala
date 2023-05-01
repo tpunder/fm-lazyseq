@@ -15,11 +15,11 @@
  */
 package fm.lazyseq
 
-import org.scalatest.FunSuite
-import org.scalatest.Matchers
 import fm.common.ProgressStats
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-final class TestTmpFileLazySeq extends FunSuite with Matchers {
+final class TestTmpFileLazySeq extends AnyFunSuite with Matchers {
   test("Simple Strings") {
     checkString(Seq())
     checkString(Seq("a"))
@@ -44,11 +44,11 @@ final class TestTmpFileLazySeq extends FunSuite with Matchers {
     checkLong(Range.Long(0L, 1234567L, 1))
   }
   
-  def checkString(it: Iterable[String]) {
+  def checkString(it: Iterable[String]): Unit = {
     checkLazySeqString(it)
   }
 
-  def checkLazySeqString(it: Iterable[String]) {
+  def checkLazySeqString(it: Iterable[String]): Unit = {
     val builder = new TmpFileLazySeqBuilder[String]()
     builder ++= it
     
@@ -56,11 +56,11 @@ final class TestTmpFileLazySeq extends FunSuite with Matchers {
     reader.toIndexedSeq should equal(it.toIndexedSeq)
   }
   
-  def checkLong(it: Iterable[Long]) {
+  def checkLong(it: Iterable[Long]): Unit = {
     checkLazySeqLong(it)
   }
   
-  def checkLazySeqLong(it: Iterable[Long]) {
+  def checkLazySeqLong(it: Iterable[Long]): Unit = {
     val builder = new TmpFileLazySeqBuilder[Long]()
     builder ++= it
     
@@ -69,10 +69,10 @@ final class TestTmpFileLazySeq extends FunSuite with Matchers {
     def check(): Unit = {
       val stats = new ProgressStats
       (reader.toSeq.view zip it.view).foreach{ case (a,b) => 
-        stats.increment
+        stats.increment()
         assert(a.toLong == b, "Expected "+a+" to equal "+b)
       }
-      stats.finalStats
+      stats.finalStats()
     }
     
     check()

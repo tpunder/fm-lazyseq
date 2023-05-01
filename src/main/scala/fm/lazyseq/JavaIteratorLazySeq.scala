@@ -21,6 +21,6 @@ package fm.lazyseq
 final class JavaIterableLazySeq[A](collection: java.lang.Iterable[A]) extends LazySeq[A] {
   final def foreach[U](f: A => U): Unit = {
     val it: java.util.Iterator[A] = collection.iterator()
-    while (it.hasNext) f(it.next)
+    while (it.hasNext()) f(it.next())
   }
 }

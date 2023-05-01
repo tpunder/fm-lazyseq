@@ -15,11 +15,10 @@
  */
 package fm.lazyseq
 
-import fm.common.{ByteBufferInputStream, ByteBufferUtil, MultiUseResource, Resource, Serializer, Snappy, UncloseableOutputStream}
-import java.io.{DataInput, DataInputStream, DataOutputStream, File, FileOutputStream, BufferedOutputStream, RandomAccessFile}
+import fm.common.{BuilderCompat, ByteBufferInputStream, ByteBufferUtil, MultiUseResource, Resource, Serializer, Snappy, TraversableOnce, UncloseableOutputStream}
+import java.io.{BufferedOutputStream, DataInput, DataInputStream, DataOutputStream, File, FileOutputStream, RandomAccessFile}
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
-import scala.collection.mutable.Builder
 
 /**
  * A builder that lets us build up a temp file that can be read back as a LazySeq.
@@ -27,7 +26,7 @@ import scala.collection.mutable.Builder
  * 
  * Methods are synchronized so this should be thread-safe now
  */
-final class TmpFileLazySeqBuilder[A](deleteTmpFiles: Boolean = true)(implicit serializer: Serializer[A]) extends Builder[A, LazySeq[A]] {
+final class TmpFileLazySeqBuilder[A](deleteTmpFiles: Boolean = true)(implicit serializer: Serializer[A]) extends BuilderCompat[A, LazySeq[A]] {
   def this(serializer: Serializer[A]) = this()(serializer)
   
   private[this] val tmpFile: File = File.createTempFile("TmpFileLazySeqBuilder", ".compressed")
@@ -43,13 +42,22 @@ final class TmpFileLazySeqBuilder[A](deleteTmpFiles: Boolean = true)(implicit se
   // Using the builder pattern we cannot use the SerializerWriter or FileOutputStreamResource so we have to do it manually...
   // TODO: find a better way?
   private[this] var writer: DataOutputStream = null
-  
+
   // Overridden to add make synchronized to prevent needing to re-synchronize for each += call
-  override def ++=(xs: TraversableOnce[A]): this.type = synchronized { xs.seq foreach += ; this }
+  override def addAll(xs: TraversableOnce[A]): this.type = synchronized {
+    super.addAll(xs)
+    this
+  }
+
+  // Overridden to add make synchronized to prevent needing to re-synchronize for each += call
+  override def addAll(xs: BuilderCompat.TraversableOnceOrIterableOnce[A]): this.type = synchronized {
+    super.addAll(xs)
+    this
+  }
   
   // This logic has to match up with the SerializerWriter...
   // TODO: find a better way?
-  def +=(elem: A): this.type = synchronized {
+  override def addOne(elem: A): this.type = synchronized {
     require(!done, "Already produced result!  Cannot add additional elements!")
     if (null == writer) writer = new DataOutputStream(new BufferedOutputStream(Snappy.newSnappyOrGzipOutputStream(UncloseableOutputStream(new FileOutputStream(raf.getFD)))))
     val bytes: Array[Byte] = serializer.serialize(elem)
@@ -59,7 +67,7 @@ final class TmpFileLazySeqBuilder[A](deleteTmpFiles: Boolean = true)(implicit se
     this
   }
   
-  def result: LazySeq[A] = synchronized {
+  override def result(): LazySeq[A] = synchronized {
     require(!done, "Already produced result!")
     done = true
     if (null == writer) EmptyLazySeq else {
@@ -75,9 +83,9 @@ final class TmpFileLazySeqBuilder[A](deleteTmpFiles: Boolean = true)(implicit se
     } 
   }
   
-  def clear: Unit = throw new UnsupportedOperationException()
+  override def clear(): Unit = throw new UnsupportedOperationException()
   
-  override protected def finalize: Unit = {
+  override protected def finalize(): Unit = {
     raf.close()
   }
 }

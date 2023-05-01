@@ -35,7 +35,7 @@ final private class ParallelMultiLazySeq[A](threads: Int, queueSize: Int, reader
       // The taskRunner queue is sized to be large enough to hold all of the tasks
       // so this section of code doesn't block
       for (reader <- readers) taskRunner.execute {
-        reader.grouped(batchSize).foreach{ v: IndexedSeq[A] => queue.put(v.asInstanceOf[AnyRef]) }
+        reader.grouped(batchSize).foreach{ (v: IndexedSeq[A]) => queue.put(v.asInstanceOf[AnyRef]) }
         queue.put(END_OF_READER)
       }
   

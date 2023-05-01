@@ -41,7 +41,7 @@ final private class SortedLazySeq[V, K](
     )
 
     builder ++= reader
-    builder.result
+    builder.result()
   }
 }
 

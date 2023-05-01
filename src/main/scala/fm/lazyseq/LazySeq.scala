@@ -15,12 +15,10 @@
  */
 package fm.lazyseq
 
-import scala.collection.{GenTraversableOnce, TraversableOnce}
-import scala.collection.generic.{CanBuildFrom, FilterMonadic, Growable}
 import scala.util.control.Breaks
 import java.util.Random
 import fm.common.Implicits._
-import fm.common.{Resource, Serializer, TaskRunner}
+import fm.common.{WithFilterCompat, Resource, Serializer, TaskRunner, TraversableOnce}
 import java.util.concurrent.BlockingQueue
 
 object LazySeq {
@@ -80,12 +78,6 @@ object LazySeq {
   def parCombine[T](readers: TraversableOnce[LazySeq[T]], threads: Int = LazySeq.defaultThreadCount, queueSize: Int = LazySeq.defaultThreadCount): LazySeq[T] = {
     new ParallelMultiLazySeq[T](threads = threads, queueSize = queueSize, readers.toIndexedSeq: _*)
   }
-  
-  /**
-   * This is needed to get the return type of map and flatMap to be a LazySeq
-   * via implicits and type casting.
-   */
-  implicit def canBuildFrom[A,B]: CanBuildFrom[LazySeq[A], B, LazySeq[B]] = null.asInstanceOf[CanBuildFrom[LazySeq[A], B, LazySeq[B]]]
 
   /**
    * An empty resource reader
@@ -123,9 +115,11 @@ object LazySeq {
  * A Non-Strict Traversable meant to be used for reading resources (Files, InputStreams, etc...) that might not fit into 
  * memory and may or may not be re-readable.
  */
-trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
+trait LazySeq[+A] extends WithFilterCompat[A, LazySeq] with TraversableOnce[A] {
   import LazySeq.breaks._
-  
+
+  override def knownSize: Int = -1
+
   /**
    * This is the method that sub-classes must implement
    */
@@ -167,7 +161,7 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
     breakable {
       for(x <- this) {
         result = () => x
-        break
+        break()
       }
     }
     result()
@@ -179,7 +173,7 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
     breakable {
       for(x <- this) {
         result = Some(x)
-        break
+        break()
       }
     }
     result
@@ -187,7 +181,9 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
 
   final def collect[B](pf: PartialFunction[A, B]): LazySeq[B] = new CollectedLazySeq(this, pf)
 
-  final def flatten[B](implicit asTraversable: A => GenTraversableOnce[B]): LazySeq[B] = flatMap{ a => asTraversable(a) }
+  // TODO: See if I can make an implicit in TraversableOnceAdapters to handle this case (and maybe some of the others too)
+//  final def flatten[B](implicit asTraversable: A => TraversableOnce[B]): LazySeq[B] = flatMap{ a => asTraversable(a) }
+  final def flatten[B](implicit asTraversable: A => WithFilterCompat.TraversableOnceOrIterableOnce[B]): LazySeq[B] = flatMap{ a => asTraversable(a) }
   
   final def grouped[B >: A](size: Int): LazySeq[IndexedSeq[B]] = new GroupedLazySeq(this, size)
   final def grouped[B >: A](size: Int, additionalIncrement: B => Int): LazySeq[IndexedSeq[B]] = new GroupedLazySeq(this, size, additionalIncrement)
@@ -246,13 +242,13 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
     
     var map = new HashMap[K, TmpFileLazySeqBuilder[B]]
     
-    foreach { a: A =>
+    foreach { (a: A) =>
       val key: K = f(a)
       if (!map.contains(key)) map = map.updated(key, new TmpFileLazySeqBuilder)
       map(key) += a
     }
     
-    map.mapValuesStrict{ _.result }
+    map.mapValuesStrict{ _.result() }
   }
   
   /**
@@ -293,18 +289,18 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
    */
   final def bucketize[B >: A](num: Int)(implicit serializer: Serializer[B]): Vector[LazySeq[B]] = {
     val builders: Array[TmpFileLazySeqBuilder[B]] = new Array(num)
-    (0 until num).foreach{ i: Int => builders(i) = new TmpFileLazySeqBuilder }
+    (0 until num).foreach{ (i: Int) => builders(i) = new TmpFileLazySeqBuilder }
     
     var i: Int = 0
     
-    foreach { a: A =>
+    foreach { (a: A) =>
       builders(i % num) += a
       i += 1
     }
     
     val result = Vector.newBuilder[LazySeq[B]]
-    builders.foreach{ b => result += b.result }
-    result.result
+    builders.foreach{ b => result += b.result() }
+    result.result()
   }
   
   /**
@@ -314,9 +310,9 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
     val left: TmpFileLazySeqBuilder[B] = new TmpFileLazySeqBuilder(serializer)
     val right: TmpFileLazySeqBuilder[B] = new TmpFileLazySeqBuilder(serializer)
     
-    foreach { a: A => if (p(a)) left += a else right += a }
+    foreach { (a: A) => if (p(a)) left += a else right += a }
     
-    (left.result, right.result)
+    (left.result(), right.result())
   }
   
   /**
@@ -349,17 +345,16 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
   /**
    * Performs a parallel flat map maintaining ordered output
    */
-  final def parFlatMap[B](f: A => GenTraversableOnce[B]): LazySeq[B] = parFlatMap[B]()(f)
+  final def parFlatMap[B](f: A => WithFilterCompat.TraversableOnceOrIterableOnce[B]): LazySeq[B] = parFlatMap[B]()(f)
   
   /**
    * Performs a parallel flat map maintaining ordered output
    */
-  final def parFlatMap[B](threads: Int = LazySeq.defaultThreadCount, inputBuffer: Int = LazySeq.defaultThreadCount, resultBuffer: Int = LazySeq.defaultThreadCount * 4)(f: A => GenTraversableOnce[B]): LazySeq[B] = {
+  final def parFlatMap[B](threads: Int = LazySeq.defaultThreadCount, inputBuffer: Int = LazySeq.defaultThreadCount, resultBuffer: Int = LazySeq.defaultThreadCount * 4)(f: A => WithFilterCompat.TraversableOnceOrIterableOnce[B]): LazySeq[B] = {
     if (threads === 1) flatMap(f)
     else parMap(threads, inputBuffer, resultBuffer)(f).flatten
   }
-  
-  
+
   final def mergeCorresponding[B >: A](that: LazySeq[B])(implicit ord: Ordering[B]): LazySeq[LazySeq.EitherOrBoth[B, B]] = new MergeCorrespondingLazySeq(this, that, (v: B) => v, (v: B) => v)(ord)
   
   /**
@@ -404,23 +399,25 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
   final def onLast[U](f: A => U): LazySeq[A] = new OnLastLazySeq(this, f)
   
   //
-  // FilterMonadic Implementation
+  // WithFilter Implementation
   //
-  final def map[B, That](f: A => B)(implicit bf: CanBuildFrom[LazySeq[A], B, That]): That = new MappedLazySeq(this, f).asInstanceOf[That]
+  final def map[B](f: A => B): LazySeq[B] = new MappedLazySeq(this, f)
   
-  final def flatMap[B, That](f: A => GenTraversableOnce[B])(implicit bf: CanBuildFrom[LazySeq[A], B, That]): That = new FlatMappedLazySeq(this, f).asInstanceOf[That]
+  final def flatMap[B](f: A => WithFilterCompat.TraversableOnceOrIterableOnce[B]): LazySeq[B] = new FlatMappedLazySeq(this, f)
+
+  final def flatMap[B](f: A => fm.common.TraversableOnce[B])(implicit dummyImplicit: DummyImplicit): LazySeq[B] = new FlatMappedLazySeq(this, f)
   
   final def withFilter(p: A => Boolean): LazySeq[A] = new FilteredLazySeq(this, p)
   
   //
   // TraversableOnce Implementation (copied from TraversableLike)
   //  
-  final def copyToArray[B >: A](xs: Array[B], start: Int, len: Int) {
+  final def copyToArray[B >: A](xs: Array[B], start: Int, len: Int): Unit = {
     var i: Int = start
     val end: Int = (start + len) min xs.length
     breakable {
       for (x <- this) {
-        if (i >= end) break
+        if (i >= end) break()
         xs(i) = x
         i += 1
       }
@@ -430,7 +427,7 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
   final def exists(p: A => Boolean): Boolean = {
     var result: Boolean = false
     breakable {
-      for (x <- this) if (p(x)) { result = true; break }
+      for (x <- this) if (p(x)) { result = true; break() }
     }
     result
   }
@@ -438,7 +435,7 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
   final def find(p: A => Boolean): Option[A] = {
     var result: Option[A] = None
     breakable {
-      for (x <- this) if (p(x)) { result = Some(x); break }
+      for (x <- this) if (p(x)) { result = Some(x); break() }
     }
     result
   }
@@ -446,24 +443,18 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
   final def forall(p: A => Boolean): Boolean = {
     var result: Boolean = true
     breakable {
-      for (x <- this) if (!p(x)) { result = false; break }
+      for (x <- this) if (!p(x)) { result = false; break() }
     }
     result
   }
-  
-  def hasDefiniteSize = true
   
   def isEmpty: Boolean = {
     var result: Boolean = true
     breakable {
-      for (x <- this) { result = false; break }
+      for (x <- this) { result = false; break() }
     }
     result
   }
-  
-  def isTraversableAgain: Boolean = false
-  
-  def seq: LazySeq[A] = this
 
   def toIterator: LazySeqIterator[A] = new BatchedLazySeqIterator(this)
   
@@ -471,8 +462,4 @@ trait LazySeq[+A] extends TraversableOnce[A] with FilterMonadic[A, LazySeq[A]] {
     if (batchSize <= 1) BufferedLazySeq[A](this, bufferSize).iterator
     else new BatchedLazySeqIterator(this, batchSize = batchSize, bufferSize = bufferSize)
   }
-  
-  def toStream: Stream[A] = toIterator.toStream
-  
-  def toTraversable: Traversable[A] = toStream
 }

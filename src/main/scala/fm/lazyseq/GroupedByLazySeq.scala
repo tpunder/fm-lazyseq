@@ -19,7 +19,7 @@ package fm.lazyseq
  * For LazySeq.groupedBy
  */
 final private class GroupedByLazySeq[A, K](reader: LazySeq[A], by: A => K) extends LazySeq[(K, IndexedSeq[A])] {
-  def foreach[U](f: Tuple2[K, IndexedSeq[A]] => U) {
+  def foreach[U](f: Tuple2[K, IndexedSeq[A]] => U): Unit = {
     var buf = Vector.newBuilder[A]
     var first: Boolean = true
     var prevKey: K = null.asInstanceOf[K]
@@ -34,7 +34,7 @@ final private class GroupedByLazySeq[A, K](reader: LazySeq[A], by: A => K) exten
       
       // When the key changes we call the function
       if (currentKey != prevKey) {
-        f((prevKey, buf.result))
+        f((prevKey, buf.result()))
         buf = Vector.newBuilder[A]
         prevKey = currentKey
       }
@@ -42,7 +42,7 @@ final private class GroupedByLazySeq[A, K](reader: LazySeq[A], by: A => K) exten
       buf += x
     }
     
-    val last = buf.result
+    val last = buf.result()
     if (last.nonEmpty) f((prevKey, last))
   }
 }

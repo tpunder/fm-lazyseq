@@ -41,11 +41,11 @@ final case class SerializerReader[A](resource: Resource[DataInput], serializer: 
   import breaks.{break, breakable}
   
   def foreach[U](f: A => U): Unit = {
-    resource.use{ input: DataInput =>
+    resource.use{ (input: DataInput) =>
       
       breakable {
         while (true) {
-          val size: Int = try { input.readInt() } catch { case ex: EOFException => break }
+          val size: Int = try { input.readInt() } catch { case ex: EOFException => break() }
           assert(size > 0)
           val bytes: Array[Byte] = new Array[Byte](size)
           input.readFully(bytes)

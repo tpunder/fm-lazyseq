@@ -15,10 +15,10 @@
  */
 package fm.lazyseq
 
-import org.scalatest.FunSuite
-import org.scalatest.Matchers
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-final class TestParallelMapLazySeq extends FunSuite with Matchers {
+final class TestParallelMapLazySeq extends AnyFunSuite with Matchers {
   private trait TestObj
   private case object Foo extends TestObj
   private case object Bar extends TestObj

@@ -20,7 +20,7 @@ package fm.lazyseq
  */
 trait IteratorLazySeq[A] extends LazySeq[A] {
   protected def hasNext: Boolean
-  protected def next: A
+  protected def next(): A
   
-  final def foreach[U](f: A => U): Unit = while(hasNext) f(next)
+  final def foreach[U](f: A => U): Unit = while(hasNext) f(next())
 }

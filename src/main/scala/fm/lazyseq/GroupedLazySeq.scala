@@ -30,7 +30,7 @@ final private class GroupedLazySeq[A](reader: LazySeq[A], size: Int, additionalI
   
   assert(size > 0, "size must be > 0 for GroupedLazySeq")
   
-  def foreach[U](f: IndexedSeq[A] => U) {
+  def foreach[U](f: IndexedSeq[A] => U): Unit = {
     var count: Int = 0
     var buf = Vector.newBuilder[A]
     
@@ -43,12 +43,12 @@ final private class GroupedLazySeq[A](reader: LazySeq[A], size: Int, additionalI
       count += increment
       
       if (count >= size) {
-        f(buf.result)
+        f(buf.result())
         count = 0
         buf = Vector.newBuilder[A]
       }
     }
     
-    if (count > 0) f(buf.result)
+    if (count > 0) f(buf.result())
   }
 }

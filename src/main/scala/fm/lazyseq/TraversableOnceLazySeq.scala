@@ -15,6 +15,8 @@
  */
 package fm.lazyseq
 
+import fm.common.TraversableOnce
+
 /**
  * LazySeq implementation that wraps a TraversableOnce
  */

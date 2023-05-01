@@ -24,10 +24,10 @@ private object TakeWhileLazySeq {
 final private class TakeWhileLazySeq[A](reader: LazySeq[A], p: A => Boolean) extends LazySeq[A] {
   import TakeWhileLazySeq.breaks._
   
-  final def foreach[U](f: A => U) {
+  final def foreach[U](f: A => U): Unit = {
     breakable {
       for (x <- reader) {
-        if (p(x)) f(x) else break
+        if (p(x)) f(x) else break()
       }
     }
   }

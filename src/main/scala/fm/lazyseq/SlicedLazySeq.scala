@@ -29,7 +29,7 @@ final private class SlicedLazySeq[A](reader: LazySeq[A], from: Int, until: Int) 
   
   import SlicedLazySeq.breaks._
   
-  final def foreach[U](f: A => U) {
+  final def foreach[U](f: A => U): Unit = {
     if (from < 0) throw new IllegalArgumentException("Slice 'from' argument cannot be < 0")
     
     var i: Int = 0
@@ -37,7 +37,7 @@ final private class SlicedLazySeq[A](reader: LazySeq[A], from: Int, until: Int) 
       for (x <- reader) {
         if (i >= from) f(x)
         i += 1
-        if (i >= until) break
+        if (i >= until) break()
       }
     }
   }

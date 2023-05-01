@@ -15,11 +15,11 @@
  */
 package fm.lazyseq
 
-import org.scalatest.FunSuite
-import org.scalatest.Matchers
 import fm.common.ProgressStats
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-final class TestSortedLazySeq extends FunSuite with Matchers {
+final class TestSortedLazySeq extends AnyFunSuite with Matchers {
   test("Simple String Sorting") {
     checkStringSort(Seq(), Seq())
     checkStringSort(Seq("a"), Seq("a"))
@@ -62,20 +62,20 @@ final class TestSortedLazySeq extends FunSuite with Matchers {
     checkLongSort(Range.Long(0L, 1234567L, 1)++Range.Long(0L, 1234567L, 1), Range.Long(0L, 1234567L, 1), true)
   }
   
-  def checkStringSort(it: Iterable[String], result: Iterable[String], unique: Boolean = false) {
+  def checkStringSort(it: Iterable[String], result: Iterable[String], unique: Boolean = false): Unit = {
     checkLazySeqStringSort(it, result, unique)
   }
 
-  def checkLazySeqStringSort(it: Iterable[String], result: Iterable[String], unique: Boolean = false) {
+  def checkLazySeqStringSort(it: Iterable[String], result: Iterable[String], unique: Boolean = false): Unit = {
     val reader: LazySeq[String] = if (unique) LazySeq.wrap(it).uniqueSorted else LazySeq.wrap(it).sorted
     reader.toIndexedSeq should equal(result.toIndexedSeq)
   }
   
-  def checkLongSort(it: Iterable[Long], result: Iterable[Long], unique: Boolean = false) {
+  def checkLongSort(it: Iterable[Long], result: Iterable[Long], unique: Boolean = false): Unit = {
     checkLazySeqLongSort(it, result, unique)
   }
   
-  def checkLazySeqLongSort(it: Iterable[Long], result: Iterable[Long], unique: Boolean = false) {
+  def checkLazySeqLongSort(it: Iterable[Long], result: Iterable[Long], unique: Boolean = false): Unit = {
     val reader: LazySeq[Long] = if (unique) LazySeq.wrap(it).uniqueSorted else LazySeq.wrap(it).sorted
     
     def check(): Unit = {
@@ -84,7 +84,7 @@ final class TestSortedLazySeq extends FunSuite with Matchers {
         stats.increment()
         assert(a == b, "Expected "+a+" to equal "+b)
       }
-      stats.finalStats
+      stats.finalStats()
     }
     
     check()

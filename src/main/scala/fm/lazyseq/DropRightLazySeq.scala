@@ -22,7 +22,7 @@ final private class DropRightLazySeq[A](reader: LazySeq[A], n: Int) extends Lazy
   
   private[this] val queue: Queue[A] = new ArrayDeque(n)
   
-  final def foreach[U](f: A => U) {
+  final def foreach[U](f: A => U): Unit = {
     for (x <- reader) {
       if (queue.size() === n) f(queue.poll())
       queue.add(x)

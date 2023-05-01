@@ -19,5 +19,5 @@ package fm.lazyseq
  * LazySeq Implementation using the Java Iterator interface
  */
 final class JavaIteratorLazySeq[A](it: java.util.Iterator[A]) extends LazySeq[A] {
-  final def foreach[U](f: A => U): Unit = while (it.hasNext) f(it.next)
+  final def foreach[U](f: A => U): Unit = while (it.hasNext) f(it.next())
 }

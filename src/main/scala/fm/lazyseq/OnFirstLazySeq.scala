@@ -17,7 +17,7 @@ package fm.lazyseq
 
 /** Run something on the first element */
 final private class OnFirstLazySeq[A, U](reader: LazySeq[A], onFirst: A => U) extends LazySeq[A] {
-  final def foreach[UU](f: A => UU) {
+  final def foreach[UU](f: A => UU): Unit = {
     var first: Boolean = true
     
     for (x <- reader) {

@@ -17,7 +17,7 @@ package fm.lazyseq
 
 /** Run something on the last element */
 final private class OnLastLazySeq[A, U](reader: LazySeq[A], onLast: A => U) extends LazySeq[A] {
-  final def foreach[UU](f: A => UU) {
+  final def foreach[UU](f: A => UU): Unit = {
     var prevSet: Boolean = false
     var prev: A = null.asInstanceOf[A]
     

@@ -16,10 +16,10 @@
 package fm.lazyseq
 
 import java.util.concurrent.TimeUnit
-import org.scalatest.FunSuite
-import org.scalatest.Matchers
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-final class TestLazySeqBuilder extends FunSuite with Matchers {
+final class TestLazySeqBuilder extends AnyFunSuite with Matchers {
   private trait TestObj
   private case object Foo extends TestObj
   private case object Bar extends TestObj
@@ -28,34 +28,34 @@ final class TestLazySeqBuilder extends FunSuite with Matchers {
   private def newBuilder(queueSize: Int = 1): LazySeqBuilder[TestObj] = new LazySeqBuilder[TestObj](queueSize = queueSize, shutdownJVMOnUncaughtException = false)
   
   test("Single Threaded - Close") {
-    val builder = newBuilder()
+    val builder: LazySeqBuilder[TestObj] = newBuilder()
     builder += Foo
-    builder.lazySeq.next should equal (Foo)
+    builder.lazySeq.next() should equal (Foo)
     builder.close()
     builder.lazySeq.hasNext should equal (false)
   }
   
   test("Single Threaded - Abort") {
-    val builder = newBuilder()
+    val builder: LazySeqBuilder[TestObj] = newBuilder()
     builder += Foo
     builder.abort()
   }
   
   test("withProducerThread - Close") {
-    val builder = newBuilder()
+    val builder: LazySeqBuilder[TestObj] = newBuilder()
     builder.withProducerThread { growable =>
       growable += Foo
       growable += Bar
     }
     
-    builder.lazySeq.next should equal (Foo)
-    builder.lazySeq.next should equal (Bar)
+    builder.lazySeq.next() should equal (Foo)
+    builder.lazySeq.next() should equal (Bar)
     builder.close()
     builder.lazySeq.hasNext should equal (false)
   }
   
   test("withProducerThread - Abort") {
-    val builder = newBuilder()
+    val builder: LazySeqBuilder[TestObj] = newBuilder()
     builder.withProducerThread { growable =>
       growable += Foo
       growable += Bar
@@ -65,7 +65,7 @@ final class TestLazySeqBuilder extends FunSuite with Matchers {
   }
   
   test("withConsumerThread - Close") {
-    val builder = newBuilder()
+    val builder: LazySeqBuilder[TestObj] = newBuilder()
     builder.withConsumerThread { reader =>
       reader.toIndexedSeq should equal (IndexedSeq(Foo, Bar))
     }
@@ -76,7 +76,7 @@ final class TestLazySeqBuilder extends FunSuite with Matchers {
   }
   
   test("withConsumerThread - Abort Clean") {
-    val builder = newBuilder()
+    val builder: LazySeqBuilder[TestObj] = newBuilder()
     builder.withConsumerThread { reader =>
       reader.toIndexedSeq should equal (IndexedSeq(Foo, Bar))
     }
@@ -87,7 +87,7 @@ final class TestLazySeqBuilder extends FunSuite with Matchers {
   }
   
   test("withConsumerThread - Abort Unclean") {    
-    val builder = newBuilder()
+    val builder: LazySeqBuilder[TestObj] = newBuilder()
     @volatile var failed: Boolean = false
     builder.withConsumerThread { reader =>
       reader.toIndexedSeq should equal (IndexedSeq(Foo, Bar))
@@ -103,7 +103,7 @@ final class TestLazySeqBuilder extends FunSuite with Matchers {
   }
   
   test("withProducerThread - Exception") {
-    val builder = newBuilder()
+    val builder: LazySeqBuilder[TestObj] = newBuilder()
     builder.withProducerThread { growable =>
       growable += Foo
       growable += Bar
@@ -112,7 +112,7 @@ final class TestLazySeqBuilder extends FunSuite with Matchers {
     
     try {
       // This will either work or throw an AbortedException depending on timing.
-      builder.lazySeq.toIndexedSeq should equal (IndexedSeq(Foo, Bar))
+      builder.lazySeq.toIndexedSeq shouldBe IndexedSeq(Foo, Bar)
     } catch {
       case ex: LazySeqBuilder.AbortedException => // This is also okay
     }
@@ -120,11 +120,11 @@ final class TestLazySeqBuilder extends FunSuite with Matchers {
   }
   
   test("withConsumerThread - Exception") {    
-    val builder = newBuilder()
+    val builder: LazySeqBuilder[TestObj] = newBuilder()
     
     builder.withConsumerThread { reader =>
-      builder.lazySeq.next should equal (Foo)
-      builder.lazySeq.next should equal (Bar)
+      builder.lazySeq.next() should equal (Foo)
+      builder.lazySeq.next() should equal (Bar)
       throw new Throwable("Uncaught Throwable from withConsumerThread")
     }
     
@@ -141,7 +141,7 @@ final class TestLazySeqBuilder extends FunSuite with Matchers {
   }
   
   test("withProducerThread/withConsumerThread - delayed consumer") {    
-    val builder = newBuilder(queueSize = 2)
+    val builder: LazySeqBuilder[TestObj] = newBuilder(queueSize = 2)
     builder.withProducerThread { growable =>
       growable += Foo
     }
@@ -160,7 +160,7 @@ final class TestLazySeqBuilder extends FunSuite with Matchers {
   }
   
   test("LazySeqBuilder foreach with exception") {
-    val builder = newBuilder()
+    val builder: LazySeqBuilder[TestObj] = newBuilder()
     
     builder.withProducerThread { growable =>
       growable += Foo
@@ -169,7 +169,7 @@ final class TestLazySeqBuilder extends FunSuite with Matchers {
     }
     
     intercept[Exception] {
-      builder.result.foreach { obj =>
+      builder.result().foreach { obj =>
         throw new Exception("foo")
       }
     }
@@ -178,7 +178,7 @@ final class TestLazySeqBuilder extends FunSuite with Matchers {
   }
   
   test("LazySeqBuilder synchronous queue - exception") {
-    val builder = newBuilder(queueSize = 0)
+    val builder: LazySeqBuilder[TestObj] = newBuilder(queueSize = 0)
     
     builder.withProducerThread { growable =>
       growable += Foo
@@ -187,7 +187,7 @@ final class TestLazySeqBuilder extends FunSuite with Matchers {
     }
     
     intercept[Exception] {
-      builder.result.foreach { obj =>
+      builder.result().foreach { obj =>
         throw new Exception("foo")
       }
     }
@@ -196,7 +196,7 @@ final class TestLazySeqBuilder extends FunSuite with Matchers {
   }
 
   test("grouped with timeout") {
-    val builder = newBuilder(queueSize = 5)
+    val builder: LazySeqBuilder[TestObj] = newBuilder(queueSize = 5)
 
     builder.withProducerThread { growable =>
       growable += Foo
@@ -216,18 +216,18 @@ final class TestLazySeqBuilder extends FunSuite with Matchers {
     val it: LazySeqIterator[IndexedSeq[TestObj]] = builder.lazySeq.grouped(4, 100, TimeUnit.MILLISECONDS).iterator
 
     it.hasNext shouldBe true
-    it.next shouldBe Vector(Foo, Bar)
+    it.next() shouldBe Vector(Foo, Bar)
     it.hasNext shouldBe true
-    it.next shouldBe Vector(Baz)
+    it.next() shouldBe Vector(Baz)
     it.hasNext shouldBe true
-    it.next shouldBe Vector(Foo, Bar, Baz, Foo)
+    it.next() shouldBe Vector(Foo, Bar, Baz, Foo)
     it.hasNext shouldBe true
-    it.next shouldBe Vector(Bar, Baz)
+    it.next() shouldBe Vector(Bar, Baz)
     it.hasNext shouldBe false
   }
 
   test("grouped with timeout - exception") {
-    val builder = newBuilder(queueSize = 5)
+    val builder: LazySeqBuilder[TestObj] = newBuilder(queueSize = 5)
 
     builder.withProducerThread { growable =>
       growable += Foo
@@ -248,18 +248,18 @@ final class TestLazySeqBuilder extends FunSuite with Matchers {
 
     // These should succeed
     it.hasNext shouldBe true
-    it.next shouldBe Vector(Foo, Bar)
+    it.next() shouldBe Vector(Foo, Bar)
     it.hasNext shouldBe true
-    it.next shouldBe Vector(Baz)
+    it.next() shouldBe Vector(Baz)
 
     // Somewhere in this code block we should end up with the AbortedException depending on how the timing works out
     intercept[LazySeqBuilder.AbortedException] {
-      while (it.hasNext) it.next
+      while (it.hasNext) it.next()
     }
   }
 
   test("grouped with timeout - empty") {
-    val builder = newBuilder(queueSize = 5)
+    val builder: LazySeqBuilder[TestObj] = newBuilder(queueSize = 5)
 
     builder.withProducerThread { growable =>
       // Do nothing
@@ -268,7 +268,7 @@ final class TestLazySeqBuilder extends FunSuite with Matchers {
     val it: LazySeqIterator[IndexedSeq[TestObj]] = builder.lazySeq.grouped(4, 100, TimeUnit.MILLISECONDS).iterator
 
     it.hasNext shouldBe false
-    intercept[NoSuchElementException] { it.next }
+    intercept[NoSuchElementException] { it.next() }
     intercept[NoSuchElementException] { it.head }
   }
 }

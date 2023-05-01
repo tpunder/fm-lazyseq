@@ -16,12 +16,11 @@
 package fm.lazyseq
 
 import fm.common.Implicits._
-import fm.common.{ByteBufferInputStream, ByteBufferUtil, Logging, ProgressStats, Resource, Serializer, Snappy, TaskRunner, UncloseableOutputStream}
+import fm.common.{BuilderCompat, ByteBufferInputStream, ByteBufferUtil, Logging, ProgressStats, Resource, Serializer, Snappy, TaskRunner, TraversableOnce, UncloseableOutputStream}
 import java.io._
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
 import java.util.{Arrays, Comparator, PriorityQueue}
-import scala.collection.mutable.Builder
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
 
@@ -45,7 +44,7 @@ final class SortedLazySeqBuilder[V, K](
   bufferRecordLimit: Int = SortedLazySeqBuilder.DefaultBufferRecordLimit,
   sortAndSaveThreads: Int = SortedLazySeqBuilder.DefaultSortAndSaveThreads,
   sortAndSaveQueueSize: Int = SortedLazySeqBuilder.DefaultSortAndSaveQueueSize
-)(implicit serializer: Serializer[V], ord: Ordering[K]) extends Builder[V, LazySeq[V]] with Logging {
+)(implicit serializer: Serializer[V], ord: Ordering[K]) extends BuilderCompat[V, LazySeq[V]] with Logging {
   import serializer._
   
   // Debug flag to disable deletion of tmp files
@@ -70,13 +69,18 @@ final class SortedLazySeqBuilder[V, K](
   private[this] var done: Boolean = false
   
   private[this] val keyBytesOrdering: Ordering[KeyBytesPair] = Ordering.by[KeyBytesPair, K]{ _.key }
-  
-  override def ++=(xs: TraversableOnce[V]): this.type = synchronized {
-    xs.foreach{ += }
+
+  override def addAll(xs: TraversableOnce[V]): this.type = synchronized {
+    super.addAll(xs)
+    this
+  }
+
+  override def addAll(xs: BuilderCompat.TraversableOnceOrIterableOnce[V]): this.type = synchronized {
+    super.addAll(xs)
     this
   }
   
-  def +=(v: V): this.type = synchronized {
+  override def addOne(v: V): this.type = synchronized {
     require(!done, "Already produced result!  Cannot add additional elements!")
     
     val keyBytes: KeyBytesPair = KeyBytesPair(key(v), serialize(v))
@@ -90,7 +94,7 @@ final class SortedLazySeqBuilder[V, K](
     this
   }
   
-  def result: LazySeq[V] = synchronized {
+  override def result(): LazySeq[V] = synchronized {
     require(!done, "Already produced result!")
     done = true
     
@@ -98,9 +102,9 @@ final class SortedLazySeqBuilder[V, K](
     
     sortAndSaveTaskRunner.shutdown()
     
-    if (logger.isInfoEnabled) stats.finalStats
+    if (logger.isInfoEnabled) stats.finalStats()
     
-    val files: Vector[Vector[MappedByteBuffer]] = sortAndSaveFutures.result.map{ Await.result(_, Duration.Inf) }
+    val files: Vector[Vector[MappedByteBuffer]] = sortAndSaveFutures.result().map{ Await.result(_, Duration.Inf) }
     
     if (files.isEmpty) {
       LazySeq.empty
@@ -110,7 +114,7 @@ final class SortedLazySeqBuilder[V, K](
     }
   }
   
-  def clear: Unit = throw new UnsupportedOperationException()
+  override def clear(): Unit = throw new UnsupportedOperationException()
     
   private def flush(): Unit = {
     // The result needs to be calculated outside of the sortAndSave task
@@ -200,7 +204,7 @@ final class SortedLazySeqBuilder[V, K](
     private def makePriorityQueue() = new PriorityQueue[BufferedRecordReader](files.length,
       new Comparator[BufferedRecordReader] {
          def compare(a: BufferedRecordReader, b: BufferedRecordReader):Int = {
-           ord.compare(a.headKey, b.headKey)
+           ord.compare(a.headKey(), b.headKey())
          }
       }
     )
@@ -276,12 +280,12 @@ final class SortedLazySeqBuilder[V, K](
       }
     }
 
-    def head(): V = _cache
+    def head: V = _cache
     
     def headKey(): K = _keyCache
 
     def pop(): V = {
-      val answer: V = head()
+      val answer: V = head
       reload()
       answer
     }

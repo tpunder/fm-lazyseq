@@ -18,6 +18,7 @@ package fm.lazyseq
 /**
  * An empty resource reader
  */
-private object EmptyLazySeq extends LazySeq[Nothing] {
-  final def foreach[U](f: Nothing => U) {}
+// TODO fixme - This was originally private but doesn't seem to compile for Scala 2.12 for some reason
+object EmptyLazySeq extends LazySeq[Nothing] {
+  final def foreach[U](f: Nothing => U): Unit = {}
 }

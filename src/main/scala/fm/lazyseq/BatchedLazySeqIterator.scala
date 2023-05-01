@@ -22,18 +22,18 @@ final private class BatchedLazySeqIterator[A](
 ) extends LazySeqIterator[A] {
 
   private[this] val batchIterator: LazySeqIterator[IndexedSeq[A]] = BufferedLazySeq[IndexedSeq[A]](reader.grouped(batchSize), bufferSize).iterator
-  private[this] var it: Iterator[A] = if (batchIterator.hasNext) batchIterator.next.iterator else Iterator.empty
+  private[this] var it: Iterator[A] = if (batchIterator.hasNext) batchIterator.next().iterator else Iterator.empty
   private[this] var hd: A = _
   private[this] var hdDefined: Boolean = false
   
   def hasNext: Boolean = {
     if (!hdDefined) {
       if (!it.hasNext && batchIterator.hasNext) {
-        it = batchIterator.next.iterator
+        it = batchIterator.next().iterator
       }
       
       if (it.hasNext) {
-        hd = it.next
+        hd = it.next()
         hdDefined = true
       }
     }
@@ -43,7 +43,7 @@ final private class BatchedLazySeqIterator[A](
   
   def head: A = if (hasNext) hd else throw new NoSuchElementException("No more elements in iterator")
   
-  def next: A = {
+  def next(): A = {
     if (!hasNext) throw new NoSuchElementException("No more elements in iterator")
 
     val res: A = hd

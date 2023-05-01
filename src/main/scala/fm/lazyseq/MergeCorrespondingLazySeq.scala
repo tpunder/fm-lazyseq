@@ -26,7 +26,7 @@ final private class MergeCorrespondingLazySeq[L, R, K](leftReader: LazySeq[L], r
   import LazySeq.{EitherOrBoth, Left, Right, Both}
   
   // This uses a thread for the rightReader to create the iterator
-  final def foreach[U](f: EitherOrBoth[L, R] => U) = Resource(rightReader.toIterator()).use { rightIt =>
+  final def foreach[U](f: EitherOrBoth[L, R] => U) = Resource(rightReader.toIterator()).use { (rightIt: LazySeqIterator[R]) =>
     
     var prevLeftKey: K = null.asInstanceOf[K]
     var prevLeftKeyDefined: Boolean = false
@@ -34,7 +34,7 @@ final private class MergeCorrespondingLazySeq[L, R, K](leftReader: LazySeq[L], r
     var prevRightKey: K = null.asInstanceOf[K]
     var prevRightKeyDefined: Boolean = false
     
-    leftReader.foreach { left: L =>
+    leftReader.foreach { (left: L) =>
       if (asserts) {
         val leftKey: K = toLeftKey(left)
         if (prevLeftKeyDefined) assert(ord.lt(prevLeftKey, leftKey), "Incorrect usage of MergeCorrespondingLazySeq.  Inputs are not sorted/unique!")
@@ -49,7 +49,7 @@ final private class MergeCorrespondingLazySeq[L, R, K](leftReader: LazySeq[L], r
         
         // Empty out any right side keys that are less than the current left key
         while (rightIt.hasNext && ord.lt(toRightKey(rightIt.head), leftKey)) {
-          val right: R = rightIt.next
+          val right: R = rightIt.next()
           
           if (asserts) {
             val rightKey: K = toRightKey(right)
@@ -64,7 +64,7 @@ final private class MergeCorrespondingLazySeq[L, R, K](leftReader: LazySeq[L], r
         // Either the keys match and we return a Both OR there are either no remaining right values
         // or the right key is greater than the left key
         if (rightIt.hasNext && ord.equiv(leftKey, toRightKey(rightIt.head))) {
-          val right: R = rightIt.next
+          val right: R = rightIt.next()
           
           if (asserts) {
             val rightKey: K = toRightKey(right)
@@ -82,7 +82,7 @@ final private class MergeCorrespondingLazySeq[L, R, K](leftReader: LazySeq[L], r
     
     // Drain anything left over on the right side
     while (rightIt.hasNext) {
-      val right: R = rightIt.next
+      val right: R = rightIt.next()
       
       if (asserts) {
         val rightKey: K = toRightKey(right)
